@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Admin - Manual Payments | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .form-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 1.5rem;
+        }
+        
+        .payment-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .payment-item:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .admin-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 640px) {
+            .form-card {
+                padding: 1.25rem;
+                margin: 0 0.5rem;
+            }
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .modal-content {
+                margin: 1rem;
+                padding: 1.25rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .user-select {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .user-select option {
+            padding: 8px;
+            background: #1a1a1a;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+                    <span class="admin-badge hidden sm:inline">🔑 Admin</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Admin - Manual Payments</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">Manual Payments</h1>
+                <p class="text-gray-400 text-sm">Record payments when LivePay callbacks fail or for offline payments</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="admin-badge">🔑 Admin Access</span>
+            </div>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Total</div>
+                <div class="text-xl md:text-2xl font-bold text-white" id="total-payments">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Pending</div>
+                <div class="text-xl md:text-2xl font-bold text-yellow-500" id="pending-payments">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Completed</div>
+                <div class="text-xl md:text-2xl font-bold text-emerald-500" id="completed-payments">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Total Amount</div>
+                <div class="text-xl md:text-2xl font-bold text-white" id="total-amount">UGX 0</div>
+            </div>
+        </div>
+
+        <!-- Manual Payment Form -->
+        <div class="form-card p-5 md:p-7 mb-6 fade-in">
+            <h2 class="text-lg md:text-xl font-bold text-white mb-5 flex items-center gap-2">
+                <span>📝</span>
+                <span>Record Manual Payment</span>
+            </h2>
+            
+            <form id="manual-payment-form" class="space-y-4">
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Select User *</label>
+                    <select id="user-select" required
+                        class="input-field w-full px-4 py-3 rounded-xl text-white text-base user-select">
+                        <option value="">Loading users...</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Search and select the user who made the payment</p>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Amount (UGX) *</label>
+                    <input type="number" id="payment-amount" required min="1"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Enter amount deposited">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Phone Number</label>
+                    <input type="tel" id="payment-phone"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="0771234567">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Payment Reference</label>
+                    <input type="text" id="payment-reference"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="e.g., LivePay-REF-1234">
+                    <p class="text-xs text-gray-500 mt-1">Optional - auto-generated if left empty</p>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Payment Method</label>
+                    <select id="payment-method"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white text-base">
+                        <option value="livepay">💳 LivePay</option>
+                        <option value="mobile_money">📱 Mobile Money</option>
+                        <option value="bank_transfer">🏦 Bank Transfer</option>
+                        <option value="cash">💵 Cash</option>
+                        <option value="other">📌 Other</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Notes</label>
+                    <textarea id="payment-notes" rows="3"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Any additional notes about this payment..."></textarea>
+                </div>
+                
+                <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20">
+                    <div class="flex items-start gap-2">
+                        <span class="text-yellow-500 text-lg flex-shrink-0">⚠️</span>
+                        <div>
+                            <p class="text-xs text-gray-300 font-medium">Important:</p>
+                            <p class="text-xs text-gray-400">This will <span class="text-white font-medium">immediately update</span> the user's wallet balance and create a transaction record. Only use this for verified payments.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20">
+                    <div class="flex items-start gap-2">
+                        <span class="text-emerald-500 text-lg flex-shrink-0">🔑</span>
+                        <div>
+                            <p class="text-xs text-gray-300 font-medium">Admin Action:</p>
+                            <p class="text-xs text-gray-400">You are recording this payment as <span class="text-emerald-400 font-medium" id="admin-name-display">Administrator</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-success w-full py-3.5 rounded-xl text-white font-semibold text-base">
+                    ✅ Record Payment & Update Wallet
+                </button>
+            </form>
+        </div>
+
+        <!-- Recent Manual Payments -->
+        <div class="bg-gray-900/50 rounded-2xl p-5 md:p-7 border border-gray-800 fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>📜</span>
+                    <span>Recent Manual Payments</span>
+                </h3>
+                <button onclick="loadManualPayments()" class="text-emerald-500 text-sm hover:text-emerald-400 transition">
+                    🔄 Refresh
+                </button>
+            </div>
+            
+            <!-- Search -->
+            <div class="mb-4">
+                <input type="text" id="search-manual" placeholder="🔍 Search by user, reference or notes..."
+                    class="search-input w-full px-4 py-2.5 text-white placeholder-gray-500 text-sm">
+            </div>
+            
+            <div id="manual-payments-list" class="space-y-3 max-h-96 overflow-y-auto">
+                <div class="text-center text-gray-500 py-8">
+                    <div class="loader"></div>
+                    <p class="mt-2">Loading manual payments...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let allManualPayments = [];
+        let currentSearch = '';
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard-admin.html';
+        }
+        
+        async function loadUsers() {
+            const { data: users, error } = await sb
+                .from('profiles')
+                .select('id, email, full_name, phone_number, wallet_balance, is_admin')
+                .order('full_name', { ascending: true });
+            
+            if (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('user-select').innerHTML = '<option value="">Error loading users</option>';
+                return;
+            }
+            
+            const select = document.getElementById('user-select');
+            select.innerHTML = '<option value="">-- Select a user --</option>';
+            
+            users?.forEach(user => {
+                const adminTag = user.is_admin ? ' 🔑 Admin' : '';
+                const label = `${user.full_name || user.email}${adminTag} - Balance: UGX ${(user.wallet_balance || 0).toLocaleString()}`;
+                select.innerHTML += `<option value="${user.id}">${label}</option>`;
+            });
+        }
+        
+        async function loadManualPayments() {
+            const { data: payments, error } = await sb
+                .from('manual_payments')
+                .select(`
+                    *,
+                    profiles!manual_payments_user_id_fkey (
+                        id,
+                        full_name,
+                        email,
+                        phone_number,
+                        is_admin
+                    ),
+                    admin:profiles!manual_payments_admin_id_fkey (
+                        id,
+                        full_name,
+                        email,
+                        is_admin
+                    )
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading manual payments:', error);
+                document.getElementById('manual-payments-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <p>Error loading manual payments</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            allManualPayments = payments || [];
+            filterAndDisplayPayments();
+            updateStats();
+        }
+        
+        function filterAndDisplayPayments() {
+            let filtered = [...allManualPayments];
+            
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(p => 
+                    (p.profiles?.full_name && p.profiles.full_name.toLowerCase().includes(searchLower)) ||
+                    (p.profiles?.email && p.profiles.email.toLowerCase().includes(searchLower)) ||
+                    (p.reference && p.reference.toLowerCase().includes(searchLower)) ||
+                    (p.notes && p.notes.toLowerCase().includes(searchLower))
+                );
+            }
+            
+            if (filtered.length === 0) {
+                document.getElementById('manual-payments-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p class="text-sm">No manual payments recorded</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const statusMap = {
+                pending: { class: 'status-pending', text: '⏳ Pending' },
+                completed: { class: 'status-completed', text: '✅ Completed' },
+                failed: { class: 'status-failed', text: '❌ Failed' },
+                cancelled: { class: 'status-failed', text: '🚫 Cancelled' }
+            };
+            
+            const html = filtered.map(p => {
+                const status = statusMap[p.status] || statusMap.pending;
+                const adminName = p.admin?.full_name || p.admin?.email || 'System';
+                const isAdminUser = p.profiles?.is_admin ? '🔑 Admin' : '';
+                
+                return `
+                    <div class="payment-item p-4 fade-in">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-white">UGX ${p.amount.toLocaleString()}</span>
+                                    ${isAdminUser ? '<span class="admin-badge">🔑 Admin</span>' : ''}
+                                </div>
+                                <div class="text-sm text-gray-300">
+                                    ${p.profiles?.full_name || p.profiles?.email || 'Unknown User'}
+                                </div>
+                                <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 mt-1">
+                                    <span>📅 ${new Date(p.created_at).toLocaleString()}</span>
+                                    <span>📱 ${p.phone_number || 'N/A'}</span>
+                                    <span>📌 ${p.payment_method || 'N/A'}</span>
+                                </div>
+                                ${p.notes ? `
+                                    <div class="text-xs text-gray-400 mt-1 bg-gray-800/50 p-2 rounded-lg">
+                                        ${p.notes}
+                                    </div>
+                                ` : ''}
+                                ${p.approved_at ? `
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ✅ Recorded by ${adminName}${p.admin?.is_admin ? ' 🔑' : ''} on ${new Date(p.approved_at).toLocaleString()}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="status-badge ${status.class}">${status.text}</span>
+                                <div class="text-xs text-gray-500 mt-1 font-mono">
+                                    ${p.reference || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('manual-payments-list').innerHTML = html;
+        }
+        
+        function updateStats() {
+            const total = allManualPayments.length;
+            const pending = allManualPayments.filter(p => p.status === 'pending').length;
+            const completed = allManualPayments.filter(p => p.status === 'completed').length;
+            const totalAmount = allManualPayments
+                .filter(p => p.status === 'completed')
+                .reduce((sum, p) => sum + p.amount, 0);
+            
+            document.getElementById('total-payments').textContent = total;
+            document.getElementById('pending-payments').textContent = pending;
+            document.getElementById('completed-payments').textContent = completed;
+            document.getElementById('total-amount').textContent = `UGX ${totalAmount.toLocaleString()}`;
+        }
+        
+        // Manual payment form submission
+        document.getElementById('manual-payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('user-select').value;
+            const amount = parseFloat(document.getElementById('payment-amount').value);
+            const phone = document.getElementById('payment-phone').value;
+            const reference = document.getElementById('payment-reference').value || `MAN-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            const paymentMethod = document.getElementById('payment-method').value;
+            const notes = document.getElementById('payment-notes').value;
+            
+            if (!userId) {
+                showToast('Please select a user', 'warning');
+                return;
+            }
+            
+            if (!amount || amount <= 0) {
+                showToast('Please enter a valid amount', 'warning');
+                return;
+            }
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Processing...';
+            submitBtn.disabled = true;
+            
+            try {
+                // Get current admin
+                const { data: { user } } = await sb.auth.getUser();
+                if (!user) throw new Error('Admin not authenticated');
+                
+                // Verify admin status
+                const { data: adminCheck } = await sb
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!adminCheck?.is_admin) {
+                    throw new Error('You do not have admin privileges');
+                }
+                
+                // Check if user exists
+                const { data: userData, error: userError } = await sb
+                    .from('profiles')
+                    .select('id, wallet_balance, full_name, email')
+                    .eq('id', userId)
+                    .single();
+                
+                if (userError) throw new Error('User not found');
+                
+                // Insert manual payment record
+                const { error: insertError } = await sb
+                    .from('manual_payments')
+                    .insert({
+                        user_id: userId,
+                        amount: amount,
+                        reference: reference,
+                        phone_number: phone,
+                        payment_method: paymentMethod,
+                        status: 'completed',
+                        admin_id: user.id,
+                        approved_at: new Date().toISOString(),
+                        notes: notes || `Manual payment via ${paymentMethod}`
+                    });
+                
+                if (insertError) throw insertError;
+                
+                // Update user wallet balance
+                const { error: balanceError } = await sb
+                    .from('profiles')
+                    .update({ 
+                        wallet_balance: (userData.wallet_balance || 0) + amount 
+                    })
+                    .eq('id', userId);
+                
+                if (balanceError) {
+                    console.error('Balance update error:', balanceError);
+                    showToast('Payment recorded but wallet update failed. Please check.', 'warning');
+                }
+                
+                // Create transaction record
+                const { error: txError } = await sb
+                    .from('transactions')
+                    .insert({
+                        user_id: userId,
+                        amount: amount,
+                        fee: 0,
+                        net_amount: amount,
+                        currency: 'UGX',
+                        transaction_type: 'deposit',
+                        status: 'completed',
+                        reference: reference,
+                        payment_method: paymentMethod,
+                        phone_number: phone,
+                        description: `Manual payment recorded by admin ${userData.full_name || userData.email}: ${notes || ''}`,
+                        completed_at: new Date().toISOString()
+                    });
+                
+                if (txError) {
+                    console.error('Transaction creation error:', txError);
+                }
+                
+                showToast(`✅ Payment of UGX ${amount.toLocaleString()} recorded for ${userData.full_name || userData.email}`, 'success');
+                
+                // Reset form
+                document.getElementById('manual-payment-form').reset();
+                document.getElementById('user-select').value = '';
+                document.getElementById('payment-reference').value = '';
+                document.getElementById('payment-notes').value = '';
+                
+                // Refresh lists
+                await loadManualPayments();
+                await loadUsers();
+                
+            } catch (error) {
+                console.error('Manual payment error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Search handler
+        document.getElementById('search-manual').addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            filterAndDisplayPayments();
+        });
+        
+        // Real-time subscriptions
+        function subscribeToUpdates() {
+            const subscription = sb
+                .channel('admin-manual-payments')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'manual_payments'
+                }, () => {
+                    loadManualPayments();
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles'
+                }, () => {
+                    loadUsers();
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Check admin access
+        async function checkAdminAccess() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            // Check using the new is_admin column
+            if (!profile?.is_admin) {
+                showToast('Access denied. Admin only.', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            // Display admin name
+            document.getElementById('admin-name-display').textContent = profile?.full_name || 'Administrator';
+            
+            await loadUsers();
+            await loadManualPayments();
+            subscription = subscribeToUpdates();
+        }
+        
+        // Initialize
+        checkAdminAccess();
+    </script>
+</body>
+</html>

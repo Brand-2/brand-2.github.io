@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Admin Dashboard | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(16, 185, 129, 0.1);
+            transition: transform 0.3s ease;
+            z-index: 50;
+        }
+        
+        .sidebar.closed {
+            transform: translateX(-100%);
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .data-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .data-card:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn {
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+        }
+        
+        .nav-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        
+        .nav-btn:active {
+            transform: scale(0.97);
+        }
+        
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 40;
+            display: none;
+        }
+        
+        .mobile-menu-overlay.open {
+            display: block;
+        }
+        
+        .tab-btn {
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .tab-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        
+        .tab-btn:active {
+            transform: scale(0.97);
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 280px;
+                transform: translateX(-100%);
+                z-index: 50;
+                padding: 1.5rem;
+                overflow-y: auto;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .sidebar.closed {
+                transform: translateX(-100%);
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .data-card {
+                padding: 1rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 1.5rem;
+        }
+        
+        .refresh-timer {
+            font-size: 0.7rem;
+            color: #6b7280;
+            background: rgba(0,0,0,0.3);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+        }
+        
+        .admin-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Overlay -->
+    <div id="menu-overlay" class="mobile-menu-overlay" onclick="closeSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar closed">
+        <div class="sidebar-logo">
+            <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-xl font-black text-white">B</span>
+            </div>
+            <div>
+                <span class="text-lg font-bold text-white">Brand <span class="text-emerald-500">2</span></span>
+                <p class="text-xs text-gray-500">Admin Dashboard</p>
+            </div>
+        </div>
+        
+        <div class="mb-4 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-gray-400 text-xs">Admin Access</div>
+                    <div class="text-sm font-bold text-white" id="admin-name">Administrator</div>
+                </div>
+                <span class="admin-badge">🔑 Admin</span>
+            </div>
+        </div>
+        
+        <nav class="space-y-1">
+            <button onclick="showSection('overview')" class="nav-btn active w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>📊</span>
+                <span>Overview</span>
+            </button>
+            <button onclick="showSection('campaigns')" class="nav-btn w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>🎯</span>
+                <span>Pending Campaigns</span>
+            </button>
+            <button onclick="window.location.href='admin/withdrawals.html'" class="nav-btn w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>🏦</span>
+                <span>Withdrawals</span>
+            </button>
+            <button onclick="window.location.href='admin/manual-payments.html'" class="nav-btn w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>💳</span>
+                <span>Manual Payments</span>
+            </button>
+            <button onclick="showSection('users')" class="nav-btn w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>👥</span>
+                <span>Users</span>
+            </button>
+            <button onclick="showSection('transactions')" class="nav-btn w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>📜</span>
+                <span>All Transactions</span>
+            </button>
+            <button onclick="showSection('admins')" class="nav-btn w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition flex items-center gap-3 text-sm">
+                <span>🔑</span>
+                <span>Manage Admins</span>
+            </button>
+        </nav>
+        
+        <div class="absolute bottom-6 left-6 right-6">
+            <button onclick="handleLogout()" class="w-full px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2 text-sm">
+                <span>🚪</span>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="md:ml-0 pb-20 md:pb-6">
+        <!-- Mobile Header -->
+        <div class="md:hidden bg-black/50 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex justify-between items-center sticky top-0 z-30">
+            <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-gray-800">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">B</span>
+                </div>
+                <span class="font-bold text-white text-sm">Brand 2 Admin</span>
+            </div>
+            <div class="w-10"></div>
+        </div>
+        
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+            <!-- Overview Section -->
+            <div id="overview-section" class="section">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
+                        <p class="text-gray-400 text-sm">Manage campaigns, users, withdrawals, and payments</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="refresh-timer" id="refresh-timer">🔄 30s</span>
+                        <button onclick="refreshAll()" class="btn-secondary px-3 py-1.5 rounded-lg text-white text-sm">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div class="stat-card p-4 text-center">
+                        <div class="text-gray-400 text-xs">Total Users</div>
+                        <div class="text-lg md:text-xl font-bold text-white" id="total-users">0</div>
+                    </div>
+                    <div class="stat-card p-4 text-center">
+                        <div class="text-gray-400 text-xs">Active Campaigns</div>
+                        <div class="text-lg md:text-xl font-bold text-emerald-500" id="active-campaigns">0</div>
+                    </div>
+                    <div class="stat-card p-4 text-center">
+                        <div class="text-gray-400 text-xs">Pending Campaigns</div>
+                        <div class="text-lg md:text-xl font-bold text-yellow-500" id="pending-campaigns">0</div>
+                    </div>
+                    <div class="stat-card p-4 text-center">
+                        <div class="text-gray-400 text-xs">Pending Withdrawals</div>
+                        <div class="text-lg md:text-xl font-bold text-orange-500" id="pending-withdrawals">0</div>
+                    </div>
+                </div>
+                
+                <!-- Platform Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+                    <div class="stat-card p-5 md:p-6">
+                        <h3 class="text-sm font-bold text-white mb-3">💰 Platform Earnings</h3>
+                        <div class="text-2xl md:text-3xl font-bold text-emerald-500 mb-1" id="platform-earnings">UGX 0</div>
+                        <div class="text-xs text-gray-500">Commission from all campaigns (10%)</div>
+                    </div>
+                    <div class="stat-card p-5 md:p-6">
+                        <h3 class="text-sm font-bold text-white mb-3">📤 Influencer Payouts</h3>
+                        <div class="text-2xl md:text-3xl font-bold text-blue-500 mb-1" id="total-payouts">UGX 0</div>
+                        <div class="text-xs text-gray-500">Total paid to influencers</div>
+                    </div>
+                    <div class="stat-card p-5 md:p-6">
+                        <h3 class="text-sm font-bold text-white mb-3">🔑 Admin Users</h3>
+                        <div class="text-2xl md:text-3xl font-bold text-purple-500 mb-1" id="total-admins">0</div>
+                        <div class="text-xs text-gray-500">Users with admin privileges</div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4">📋 Recent Activity</h2>
+                    <div id="recent-activity" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8">
+                            <div class="loader"></div>
+                            <p class="mt-2">Loading activity...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pending Campaigns Section -->
+            <div id="campaigns-section" class="section hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                    <h2 class="text-2xl font-bold text-white">Pending Campaigns</h2>
+                    <button onclick="window.location.href='admin/campaigns.html'" class="text-emerald-500 text-sm">View All →</button>
+                </div>
+                <div id="pending-campaigns-list" class="space-y-4">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading pending campaigns...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Users Section -->
+            <div id="users-section" class="section hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                    <h2 class="text-2xl font-bold text-white">Manage Users</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="user-search" placeholder="🔍 Search by name or email..."
+                            class="w-full sm:w-64 px-4 py-2 rounded-xl bg-black/50 border border-gray-700 text-white text-sm focus:border-emerald-500 focus:outline-none">
+                        <button onclick="loadUsers()" class="btn-secondary px-4 py-2 rounded-xl text-white text-sm">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+                <div id="users-list" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transactions Section -->
+            <div id="transactions-section" class="section hidden">
+                <h2 class="text-2xl font-bold text-white mb-6">All Transactions</h2>
+                <div id="all-transactions" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading transactions...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admins Section -->
+            <div id="admins-section" class="section hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                    <h2 class="text-2xl font-bold text-white">Manage Administrators</h2>
+                    <button onclick="showAddAdminModal()" class="btn-primary px-4 py-2 rounded-xl text-white text-sm font-medium">
+                        ➕ Add Admin
+                    </button>
+                </div>
+                <div id="admins-list" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading admins...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Add Admin Modal -->
+    <div id="add-admin-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-8 max-w-md w-full modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Add Administrator</h3>
+                <button onclick="closeAddAdminModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <form id="add-admin-form" class="space-y-4">
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-2">Select User</label>
+                    <select id="admin-user-select" required
+                        class="input-field w-full px-4 py-3 rounded-xl text-white text-base">
+                        <option value="">Loading users...</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Only users who are not already admins will appear</p>
+                </div>
+                
+                <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20">
+                    <p class="text-xs text-gray-300">
+                        ⚠️ Granting admin access gives the user full control over campaigns, users, withdrawals, and payments.
+                    </p>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 btn-primary py-3 rounded-xl text-white font-semibold text-base">
+                        Grant Admin Access
+                    </button>
+                    <button type="button" onclick="closeAddAdminModal()" class="flex-1 btn-secondary py-3 rounded-xl text-white font-semibold text-base">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <style>
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .admin-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .admin-card:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+    </style>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let refreshTimer = 30;
+        let refreshInterval = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('menu-overlay');
+            sidebar.classList.toggle('open');
+            sidebar.classList.toggle('closed');
+            overlay.classList.toggle('open');
+        }
+        
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('menu-overlay');
+            sidebar.classList.remove('open');
+            sidebar.classList.add('closed');
+            overlay.classList.remove('open');
+        }
+        
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${section}-section`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const btns = document.querySelectorAll('.nav-btn');
+            const sectionMap = {
+                'overview': 0,
+                'campaigns': 1,
+                'users': 4,
+                'transactions': 5,
+                'admins': 6
+            };
+            if (sectionMap[section] !== undefined) {
+                btns[sectionMap[section]]?.classList.add('active');
+            }
+            
+            closeSidebar();
+        }
+        
+        function refreshAll() {
+            refreshTimer = 30;
+            document.getElementById('refresh-timer').textContent = '🔄 30s';
+            loadAllData();
+            showToast('Refreshed!', 'success');
+        }
+        
+        async function handleLogout() {
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
+        }
+        
+        async function loadAllData() {
+            await loadOverview();
+            await loadPendingCampaigns();
+            await loadUsers();
+            await loadAllTransactions();
+            await loadAdmins();
+        }
+        
+        async function loadOverview() {
+            // Total users
+            const { count: totalUsers } = await sb
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
+            
+            // Active campaigns
+            const { count: activeCampaigns } = await sb
+                .from('campaigns')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'active');
+            
+            // Pending campaigns
+            const { count: pendingCampaigns } = await sb
+                .from('campaigns')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending');
+            
+            // Pending withdrawals
+            const { count: pendingWithdrawals } = await sb
+                .from('withdrawal_requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending');
+            
+            // Platform earnings (10% commission from all deposits)
+            const { data: deposits } = await sb
+                .from('transactions')
+                .select('amount')
+                .eq('transaction_type', 'deposit')
+                .eq('status', 'completed');
+            
+            const totalDeposits = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+            const platformEarnings = totalDeposits * 0.10;
+            
+            // Total payouts to influencers
+            const { data: payouts } = await sb
+                .from('transactions')
+                .select('amount')
+                .eq('transaction_type', 'reward')
+                .eq('status', 'completed');
+            
+            const totalPayouts = payouts?.reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0;
+            
+            // Total admins
+            const { count: totalAdmins } = await sb
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_admin', true);
+            
+            document.getElementById('total-users').textContent = totalUsers || 0;
+            document.getElementById('active-campaigns').textContent = activeCampaigns || 0;
+            document.getElementById('pending-campaigns').textContent = pendingCampaigns || 0;
+            document.getElementById('pending-withdrawals').textContent = pendingWithdrawals || 0;
+            document.getElementById('platform-earnings').textContent = `UGX ${platformEarnings.toLocaleString()}`;
+            document.getElementById('total-payouts').textContent = `UGX ${totalPayouts.toLocaleString()}`;
+            document.getElementById('total-admins').textContent = totalAdmins || 0;
+            
+            // Recent activity
+            const { data: recentTransactions } = await sb
+                .from('transactions')
+                .select('*, profiles!transactions_user_id_fkey (full_name, email)')
+                .order('created_at', { ascending: false })
+                .limit(10);
+            
+            const activityHtml = recentTransactions?.map(t => {
+                const isDeposit = t.transaction_type === 'deposit';
+                const isWithdrawal = t.transaction_type === 'withdrawal';
+                const isReward = t.transaction_type === 'reward';
+                let icon = '💳';
+                let color = 'text-blue-400';
+                if (isDeposit) { icon = '💰'; color = 'text-emerald-400'; }
+                else if (isWithdrawal) { icon = '🏦'; color = 'text-red-400'; }
+                else if (isReward) { icon = '🎁'; color = 'text-blue-400'; }
+                
+                const userName = t.profiles?.full_name || t.profiles?.email || 'User';
+                const action = isDeposit ? 'deposited' : isWithdrawal ? 'withdrew' : 'earned';
+                
+                return `
+                    <div class="data-card p-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                        <div class="flex items-center gap-2">
+                            <span>${icon}</span>
+                            <div>
+                                <div class="text-white text-sm font-medium">${userName}</div>
+                                <div class="text-xs text-gray-500">${action} UGX ${t.amount.toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            ${new Date(t.created_at).toLocaleString()}
+                            <span class="ml-2 status-badge ${t.status === 'completed' ? 'status-active' : 'status-pending'}">${t.status}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="text-center text-gray-500 py-8">No recent activity</div>';
+            
+            document.getElementById('recent-activity').innerHTML = activityHtml;
+        }
+        
+        async function loadPendingCampaigns() {
+            const { data: campaigns } = await sb
+                .from('campaigns')
+                .select('*, businesses!campaigns_business_id_fkey (business_name, user_id)')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+                .limit(5);
+            
+            if (!campaigns || campaigns.length === 0) {
+                document.getElementById('pending-campaigns-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">✅</div>
+                        <p>No pending campaigns</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = campaigns.map(c => `
+                <div class="data-card p-4">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-white text-sm">${c.campaign_name}</div>
+                            <div class="text-sm text-gray-400">${c.businesses?.business_name || 'Unknown Business'}</div>
+                            <div class="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
+                                <span>💰 UGX ${c.budget.toLocaleString()}</span>
+                                <span>📅 ${new Date(c.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="window.location.href='admin/campaigns.html'" class="btn-secondary px-3 py-1.5 rounded-lg text-white text-sm">
+                                📋 Review
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('pending-campaigns-list').innerHTML = html;
+        }
+        
+        async function loadUsers() {
+            const searchTerm = document.getElementById('user-search')?.value.toLowerCase() || '';
+            
+            let query = sb
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            const { data: users } = await query;
+            
+            const filtered = users?.filter(u => 
+                u.full_name?.toLowerCase().includes(searchTerm) || 
+                u.email?.toLowerCase().includes(searchTerm)
+            );
+            
+            const html = filtered?.slice(0, 20).map(u => `
+                <div class="data-card p-4">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-white text-sm">${u.full_name || 'No name'}</span>
+                                ${u.is_admin ? '<span class="admin-badge text-xs">🔑 Admin</span>' : ''}
+                            </div>
+                            <div class="text-sm text-gray-400">${u.email}</div>
+                            <div class="text-xs text-gray-500">📱 ${u.phone_number || 'N/A'}</div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs text-gray-500">Balance: UGX ${(u.wallet_balance || 0).toLocaleString()}</span>
+                            <span class="text-xs ${u.is_active ? 'text-emerald-500' : 'text-red-500'}">${u.is_active ? '✅ Active' : '❌ Inactive'}</span>
+                            ${!u.is_admin ? `
+                                <button onclick="makeAdmin('${u.id}')" class="btn-primary px-2 py-1 rounded text-xs text-white">
+                                    Make Admin
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-center text-gray-500 py-8">No users found</div>';
+            
+            document.getElementById('users-list').innerHTML = html;
+        }
+        
+        async function loadAdmins() {
+            const { data: admins } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('is_admin', true)
+                .order('full_name', { ascending: true });
+            
+            if (!admins || admins.length === 0) {
+                document.getElementById('admins-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">🔑</div>
+                        <p>No admin users found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = admins.map(admin => `
+                <div class="admin-card p-4">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-white">${admin.full_name || 'Admin'}</span>
+                                <span class="admin-badge">🔑 Admin</span>
+                            </div>
+                            <div class="text-sm text-gray-400">${admin.email}</div>
+                            <div class="text-xs text-gray-500">📱 ${admin.phone_number || 'N/A'}</div>
+                            <div class="text-xs text-gray-500">Joined: ${new Date(admin.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">Balance: UGX ${(admin.wallet_balance || 0).toLocaleString()}</span>
+                            ${admin.id !== currentUser?.id ? `
+                                <button onclick="removeAdmin('${admin.id}')" class="btn-danger px-3 py-1.5 rounded-lg text-white text-sm">
+                                    Remove Admin
+                                </button>
+                            ` : `
+                                <span class="text-xs text-emerald-500">(You)</span>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('admins-list').innerHTML = html;
+        }
+        
+        async function loadAllTransactions() {
+            const { data: transactions } = await sb
+                .from('transactions')
+                .select('*, profiles!transactions_user_id_fkey (full_name, email)')
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            if (!transactions || transactions.length === 0) {
+                document.getElementById('all-transactions').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">No transactions found</div>
+                `;
+                return;
+            }
+            
+            const html = transactions.map(t => {
+                const isDeposit = t.transaction_type === 'deposit';
+                const isWithdrawal = t.transaction_type === 'withdrawal';
+                const isReward = t.transaction_type === 'reward';
+                let icon = '💳';
+                let color = 'text-blue-400';
+                if (isDeposit) { icon = '💰'; color = 'text-emerald-500'; }
+                else if (isWithdrawal) { icon = '🏦'; color = 'text-red-500'; }
+                else if (isReward) { icon = '🎁'; color = 'text-blue-500'; }
+                
+                const prefix = (isDeposit || isReward) ? '+' : '-';
+                
+                return `
+                    <div class="data-card p-4">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span>${icon}</span>
+                                    <span class="font-medium text-white text-sm">${t.profiles?.full_name || t.profiles?.email || 'Unknown'}</span>
+                                </div>
+                                <div class="text-xs text-gray-500">${t.transaction_type} - ${t.reference?.substring(0, 15) || 'N/A'}</div>
+                                <div class="text-xs text-gray-500">${new Date(t.created_at).toLocaleString()}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold ${color}">${prefix} UGX ${t.amount.toLocaleString()}</div>
+                                <div class="text-xs ${t.status === 'completed' ? 'text-emerald-500' : 'text-yellow-500'}">${t.status}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('all-transactions').innerHTML = html;
+        }
+        
+        async function makeAdmin(userId) {
+            if (!confirm('Are you sure you want to grant admin privileges to this user?')) return;
+            
+            try {
+                const { error } = await sb
+                    .from('profiles')
+                    .update({ is_admin: true })
+                    .eq('id', userId);
+                
+                if (error) throw error;
+                
+                showToast('✅ User is now an admin!', 'success');
+                loadUsers();
+                loadAdmins();
+                loadOverview();
+                
+            } catch (error) {
+                console.error('Error making admin:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function removeAdmin(userId) {
+            if (!confirm('Are you sure you want to remove admin privileges from this user?')) return;
+            
+            try {
+                const { error } = await sb
+                    .from('profiles')
+                    .update({ is_admin: false })
+                    .eq('id', userId);
+                
+                if (error) throw error;
+                
+                showToast('✅ Admin privileges removed', 'success');
+                loadAdmins();
+                loadUsers();
+                loadOverview();
+                
+            } catch (error) {
+                console.error('Error removing admin:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function showAddAdminModal() {
+            document.getElementById('add-admin-modal').classList.remove('hidden');
+            loadNonAdminUsers();
+        }
+        
+        function closeAddAdminModal() {
+            document.getElementById('add-admin-modal').classList.add('hidden');
+        }
+        
+        async function loadNonAdminUsers() {
+            const { data: users } = await sb
+                .from('profiles')
+                .select('id, full_name, email')
+                .eq('is_admin', false)
+                .order('full_name', { ascending: true });
+            
+            const select = document.getElementById('admin-user-select');
+            select.innerHTML = '<option value="">-- Select a user --</option>';
+            
+            users?.forEach(user => {
+                select.innerHTML += `<option value="${user.id}">${user.full_name || user.email}</option>`;
+            });
+        }
+        
+        document.getElementById('add-admin-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('admin-user-select').value;
+            
+            if (!userId) {
+                showToast('Please select a user', 'warning');
+                return;
+            }
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+            
+            try {
+                const { error } = await sb
+                    .from('profiles')
+                    .update({ is_admin: true })
+                    .eq('id', userId);
+                
+                if (error) throw error;
+                
+                showToast('✅ Admin added successfully!', 'success');
+                closeAddAdminModal();
+                loadAdmins();
+                loadUsers();
+                loadOverview();
+                
+            } catch (error) {
+                console.error('Error adding admin:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+        
+        // Search handler
+        document.getElementById('user-search')?.addEventListener('input', loadUsers);
+        
+        // Auto-refresh
+        function startAutoRefresh() {
+            refreshTimer = 30;
+            document.getElementById('refresh-timer').textContent = '🔄 30s';
+            
+            if (refreshInterval) clearInterval(refreshInterval);
+            
+            refreshInterval = setInterval(() => {
+                refreshTimer--;
+                document.getElementById('refresh-timer').textContent = `🔄 ${refreshTimer}s`;
+                
+                if (refreshTimer <= 0) {
+                    refreshTimer = 30;
+                    loadOverview();
+                    document.getElementById('refresh-timer').textContent = '🔄 30s';
+                }
+            }, 1000);
+        }
+        
+        // Real-time subscriptions
+        function subscribeToUpdates() {
+            const subscription = sb
+                .channel('admin-dashboard')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'profiles'
+                }, () => {
+                    loadOverview();
+                    loadUsers();
+                    loadAdmins();
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'campaigns'
+                }, () => {
+                    loadOverview();
+                    loadPendingCampaigns();
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'transactions'
+                }, () => {
+                    loadOverview();
+                    loadAllTransactions();
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'withdrawal_requests'
+                }, () => {
+                    loadOverview();
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Check admin access
+        async function checkAdminAccess() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            // Check if user is admin using the new is_admin column
+            if (!profile?.is_admin) {
+                showToast('Access denied. Admin only.', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            document.getElementById('admin-name').textContent = profile?.full_name || 'Administrator';
+            
+            await loadAllData();
+            subscription = subscribeToUpdates();
+            startAutoRefresh();
+        }
+        
+        // Initialize
+        checkAdminAccess();
+    </script>
+</body>
+</html>

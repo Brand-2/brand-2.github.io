@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>My Profile | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .profile-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 1.5rem;
+        }
+        
+        .avatar-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+        }
+        
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1));
+            border: 3px solid rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #34d399;
+            object-fit: cover;
+        }
+        
+        .avatar-upload {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 32px;
+            height: 32px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            border: 2px solid #1a1a1a;
+            transition: all 0.3s ease;
+        }
+        
+        .avatar-upload:hover {
+            transform: scale(1.1);
+            background: #059669;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .input-field:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .input-field.error {
+            border-color: #ef4444;
+        }
+        
+        .input-field.success {
+            border-color: #10b981;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .tab-btn {
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        
+        .tab-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        
+        .tab-btn:active {
+            transform: scale(0.97);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .badge-advertiser {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        
+        .badge-influencer {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+        
+        .badge-both {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+        
+        .rating-stars {
+            color: #f59e0b;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        
+        .ad-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        @media (max-width: 640px) {
+            .profile-card {
+                padding: 1.25rem;
+                margin: 0.5rem;
+            }
+            .avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+            .avatar-container {
+                width: 80px;
+                height: 80px;
+            }
+            .avatar-upload {
+                width: 28px;
+                height: 28px;
+                font-size: 0.8rem;
+            }
+            .tab-btn {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.75rem;
+            }
+            .ad-thumb {
+                width: 50px;
+                height: 50px;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .commission-badge {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            color: #fbbf24;
+        }
+        
+        .contact-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.6rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Profile</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto p-4 md:p-6">
+        <!-- Profile Header -->
+        <div class="profile-card p-6 md:p-8 mb-6 fade-in">
+            <div class="flex flex-col md:flex-row items-center gap-6">
+                <!-- Avatar -->
+                <div class="avatar-container">
+                    <div id="avatar-display" class="avatar">
+                        <span id="avatar-letter">B</span>
+                    </div>
+                    <label class="avatar-upload" title="Change avatar">
+                        <span>📷</span>
+                        <input type="file" id="avatar-upload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+                    </label>
+                </div>
+                
+                <!-- User Info -->
+                <div class="flex-1 text-center md:text-left">
+                    <h2 class="text-2xl font-bold text-white" id="profile-name">Loading...</h2>
+                    <p class="text-gray-400 text-sm" id="profile-email">email@example.com</p>
+                    <div class="flex flex-wrap gap-2 justify-center md:justify-start mt-2">
+                        <span class="badge badge-advertiser" id="profile-advertiser">📢 Advertiser</span>
+                        <span class="badge badge-influencer" id="profile-influencer">👥 Influencer</span>
+                        <span class="badge badge-both" id="profile-status">✅ Active</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="commission-badge">⚡ 10% platform fee</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2" id="profile-bio"></p>
+                    <p class="text-gray-500 text-xs" id="profile-location"></p>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="flex gap-4">
+                    <div class="text-center">
+                        <div class="text-emerald-500 font-bold text-lg" id="profile-balance">UGX 0</div>
+                        <div class="text-gray-500 text-xs">Balance</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-white font-bold text-lg" id="profile-earnings">UGX 0</div>
+                        <div class="text-gray-500 text-xs">Earned</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-white font-bold text-lg" id="profile-spend">UGX 0</div>
+                        <div class="text-gray-500 text-xs">Spent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 border-b border-gray-800 pb-1 mb-6 overflow-x-auto">
+            <button onclick="showTab('personal')" id="tab-personal" class="tab-btn active">
+                👤 Personal Info
+            </button>
+            <button onclick="showTab('business')" id="tab-business" class="tab-btn">
+                🏢 Business Info
+            </button>
+            <button onclick="showTab('security')" id="tab-security" class="tab-btn">
+                🔒 Security
+            </button>
+            <button onclick="showTab('ads')" id="tab-ads" class="tab-btn">
+                📱 My Ads
+            </button>
+        </div>
+
+        <!-- Personal Info Tab -->
+        <div id="personal-tab" class="tab-content">
+            <div class="profile-card p-6 md:p-8 fade-in">
+                <h3 class="text-lg font-bold text-white mb-4">Personal Information</h3>
+                <form id="personal-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Full Name</label>
+                        <input type="text" id="edit-name" required
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Email Address</label>
+                        <input type="email" id="edit-email" disabled
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                        <p class="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Phone Number</label>
+                        <input type="tel" id="edit-phone"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Bio</label>
+                        <textarea id="edit-bio" rows="3"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                            placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Location</label>
+                        <input type="text" id="edit-location"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                            placeholder="e.g., Kampala, Uganda">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary px-6 py-3 rounded-xl text-white font-semibold text-sm">
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Business Info Tab -->
+        <div id="business-tab" class="tab-content hidden">
+            <div class="profile-card p-6 md:p-8 fade-in">
+                <h3 class="text-lg font-bold text-white mb-4">Business Information</h3>
+                <form id="business-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Business Name</label>
+                        <input type="text" id="edit-business-name"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Business Description</label>
+                        <textarea id="edit-business-desc" rows="3"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Website URL</label>
+                        <input type="url" id="edit-website"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                            placeholder="https://yourwebsite.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Category</label>
+                        <select id="edit-category"
+                            class="input-field w-full px-4 py-3 rounded-xl text-white text-base">
+                            <option value="">Select Category</option>
+                            <option value="Retail">🛍️ Retail & Shopping</option>
+                            <option value="Technology">💻 Technology</option>
+                            <option value="Food & Beverage">🍔 Food & Beverage</option>
+                            <option value="Services">📞 Services</option>
+                            <option value="Health & Beauty">💅 Health & Beauty</option>
+                            <option value="Education">📚 Education</option>
+                            <option value="Real Estate">🏠 Real Estate</option>
+                            <option value="Entertainment">🎬 Entertainment</option>
+                            <option value="Other">📌 Other</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary px-6 py-3 rounded-xl text-white font-semibold text-sm">
+                        Save Business Info
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Security Tab -->
+        <div id="security-tab" class="tab-content hidden">
+            <div class="profile-card p-6 md:p-8 fade-in">
+                <h3 class="text-lg font-bold text-white mb-4">Security</h3>
+                
+                <div class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-300 mb-3">Change Password</h4>
+                    <form id="password-form" class="space-y-4">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Current Password</label>
+                            <input type="password" id="current-password" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="Enter current password">
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">New Password</label>
+                            <input type="password" id="new-password" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="Minimum 6 characters">
+                            <p class="text-xs text-gray-500 mt-1">Password must be at least 6 characters</p>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Confirm New Password</label>
+                            <input type="password" id="confirm-password" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="Re-enter new password">
+                            <p id="password-match-hint" class="text-xs text-gray-500 mt-1 hidden">Passwords do not match</p>
+                        </div>
+                        <button type="submit" class="btn-primary px-6 py-3 rounded-xl text-white font-semibold text-sm">
+                            Update Password
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="border-t border-gray-800 pt-4">
+                    <h4 class="text-sm font-medium text-gray-300 mb-3">Account Actions</h4>
+                    <button onclick="confirmDeleteAccount()" class="btn-secondary px-6 py-2.5 rounded-xl text-red-400 border-red-500/20 text-sm">
+                        🗑️ Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Ads Tab -->
+        <div id="ads-tab" class="tab-content hidden">
+            <div class="profile-card p-6 md:p-8 fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-white">My Ad Cards</h3>
+                    <button onclick="window.location.href='campaign-create.html'" class="btn-primary px-4 py-2 rounded-lg text-white text-sm font-semibold">
+                        ➕ Create Ad
+                    </button>
+                </div>
+                
+                <div id="user-ads-list" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading your ads...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let currentBusiness = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${tab}-tab`).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+        
+        function generateStars(rating) {
+            const full = Math.round(rating || 0);
+            return '⭐'.repeat(full) + '☆'.repeat(5 - full);
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            // Update profile display
+            document.getElementById('profile-name').textContent = profile?.full_name || 'User';
+            document.getElementById('profile-email').textContent = profile?.email || user.email;
+            document.getElementById('profile-balance').textContent = `UGX ${(profile?.wallet_balance || 0).toLocaleString()}`;
+            document.getElementById('profile-earnings').textContent = `UGX ${(profile?.total_influence_earnings || 0).toLocaleString()}`;
+            document.getElementById('profile-spend').textContent = `UGX ${(profile?.total_ad_spend || 0).toLocaleString()}`;
+            document.getElementById('profile-status').textContent = profile?.is_active ? '✅ Active' : '❌ Inactive';
+            document.getElementById('profile-bio').textContent = profile?.bio || '';
+            document.getElementById('profile-location').textContent = profile?.location ? `📍 ${profile.location}` : '';
+            
+            // Show badges
+            const isAdvertiser = profile?.is_advertiser !== false;
+            const isInfluencer = profile?.is_influencer !== false;
+            
+            if (isAdvertiser && isInfluencer) {
+                document.getElementById('profile-advertiser').textContent = '📢 Advertiser';
+                document.getElementById('profile-influencer').textContent = '👥 Influencer';
+                document.getElementById('profile-advertiser').className = 'badge badge-advertiser';
+                document.getElementById('profile-influencer').className = 'badge badge-influencer';
+            } else if (isAdvertiser) {
+                document.getElementById('profile-advertiser').textContent = '📢 Advertiser Only';
+                document.getElementById('profile-influencer').textContent = '';
+                document.getElementById('profile-influencer').className = 'badge badge-influencer hidden';
+            } else {
+                document.getElementById('profile-advertiser').textContent = '';
+                document.getElementById('profile-advertiser').className = 'badge badge-advertiser hidden';
+                document.getElementById('profile-influencer').textContent = '👥 Influencer Only';
+                document.getElementById('profile-influencer').className = 'badge badge-influencer';
+            }
+            
+            // Avatar letter
+            const initial = profile?.full_name?.charAt(0) || 'U';
+            document.getElementById('avatar-letter').textContent = initial.toUpperCase();
+            
+            // Personal form
+            document.getElementById('edit-name').value = profile?.full_name || '';
+            document.getElementById('edit-email').value = profile?.email || user.email;
+            document.getElementById('edit-phone').value = profile?.phone_number || '';
+            document.getElementById('edit-bio').value = profile?.bio || '';
+            document.getElementById('edit-location').value = profile?.location || '';
+            
+            // Load business
+            const { data: business } = await sb
+                .from('businesses')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            
+            currentBusiness = business;
+            
+            if (business) {
+                document.getElementById('edit-business-name').value = business.business_name || '';
+                document.getElementById('edit-business-desc').value = business.business_description || '';
+                document.getElementById('edit-website').value = business.website_url || '';
+                document.getElementById('edit-category').value = business.category || '';
+            }
+            
+            // Load user's ads
+            await loadUserAds();
+        }
+        
+        async function loadUserAds() {
+            if (!currentUser) return;
+            
+            let query = sb
+                .from('campaigns')
+                .select('*')
+                .eq('is_ad_card', true)
+                .order('created_at', { ascending: false });
+            
+            if (currentBusiness) {
+                query = query.eq('business_id', currentBusiness.id);
+            } else {
+                document.getElementById('user-ads-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p class="text-sm">No business profile yet</p>
+                        <p class="text-xs mt-1">Create a business profile to start creating ads</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const { data: campaigns } = await query;
+            
+            if (!campaigns || campaigns.length === 0) {
+                document.getElementById('user-ads-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p class="text-sm">No ad cards yet</p>
+                        <button onclick="window.location.href='campaign-create.html'" class="btn-primary px-4 py-2 rounded-lg text-white text-sm font-semibold mt-2">
+                            Create Your First Ad →
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const statusColors = {
+                draft: 'status-draft',
+                pending: 'status-pending',
+                active: 'status-active',
+                completed: 'status-completed',
+                rejected: 'status-rejected',
+                paused: 'status-paused'
+            };
+            
+            const html = campaigns.slice(0, 5).map(c => {
+                const imageUrl = c.media_urls && c.media_urls.length > 0 ? c.media_urls[0] : null;
+                const rating = c.rating || 0;
+                const stars = generateStars(rating);
+                
+                return `
+                    <div class="bg-black/30 rounded-xl p-4 flex items-center gap-4">
+                        ${imageUrl ? `
+                            <img src="${imageUrl}" alt="${c.campaign_name}" class="ad-thumb">
+                        ` : `
+                            <div class="ad-thumb flex items-center justify-center text-2xl bg-gray-800 rounded-lg">
+                                🖼️
+                            </div>
+                        `}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-bold text-white text-sm">${c.campaign_name}</span>
+                                <span class="status-badge ${statusColors[c.status] || 'status-pending'}">${c.status}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                <span>👁️ ${c.total_views || 0}</span>
+                                <span>🖱️ ${c.total_clicks || 0}</span>
+                                ${c.rating > 0 ? `<span class="rating-stars">${stars}</span>` : ''}
+                            </div>
+                            ${c.location ? `<span class="contact-chip">📍 ${c.location}</span>` : ''}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="window.location.href='ad-card.html?id=${c.id}'" class="btn-primary px-3 py-1.5 rounded-lg text-white text-xs">
+                                View
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const moreCount = campaigns.length - 5;
+            const moreHtml = moreCount > 0 ? `
+                <div class="text-center pt-2">
+                    <button onclick="window.location.href='campaign-manage.html'" class="text-emerald-500 text-sm hover:text-emerald-400 transition">
+                        View all ${campaigns.length} ads →
+                    </button>
+                </div>
+            ` : '';
+            
+            document.getElementById('user-ads-list').innerHTML = html + moreHtml;
+        }
+        
+        // Personal Info Update
+        document.getElementById('personal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('edit-name').value.trim();
+            const phone = document.getElementById('edit-phone').value.trim();
+            const bio = document.getElementById('edit-bio').value.trim();
+            const location = document.getElementById('edit-location').value.trim();
+            
+            if (!fullName) {
+                showToast('Full name is required', 'warning');
+                return;
+            }
+            
+            const { error } = await sb
+                .from('profiles')
+                .update({
+                    full_name: fullName,
+                    phone_number: phone,
+                    bio: bio,
+                    location: location
+                })
+                .eq('id', currentUser.id);
+            
+            if (error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Profile updated successfully!', 'success');
+                loadUserData();
+            }
+        });
+        
+        // Business Info Update
+        document.getElementById('business-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const businessName = document.getElementById('edit-business-name').value.trim();
+            const description = document.getElementById('edit-business-desc').value.trim();
+            const website = document.getElementById('edit-website').value.trim();
+            const category = document.getElementById('edit-category').value;
+            
+            if (!businessName) {
+                showToast('Business name is required', 'warning');
+                return;
+            }
+            
+            // Check if business exists
+            if (currentBusiness) {
+                const { error } = await sb
+                    .from('businesses')
+                    .update({
+                        business_name: businessName,
+                        business_description: description,
+                        website_url: website,
+                        category: category
+                    })
+                    .eq('user_id', currentUser.id);
+                
+                if (error) {
+                    showToast(error.message, 'error');
+                } else {
+                    showToast('Business info updated successfully!', 'success');
+                    loadUserData();
+                }
+            } else {
+                // Create new business
+                const { error } = await sb
+                    .from('businesses')
+                    .insert({
+                        user_id: currentUser.id,
+                        business_name: businessName,
+                        business_description: description,
+                        website_url: website,
+                        category: category
+                    });
+                
+                if (error) {
+                    showToast(error.message, 'error');
+                } else {
+                    showToast('Business created successfully!', 'success');
+                    loadUserData();
+                }
+            }
+        });
+        
+        // Password Update
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('Please fill in all password fields', 'warning');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showToast('New password must be at least 6 characters', 'warning');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('New passwords do not match', 'warning');
+                return;
+            }
+            
+            try {
+                const { error } = await sb.auth.updateUser({
+                    password: newPassword
+                });
+                
+                if (error) {
+                    if (error.message.includes('password')) {
+                        showToast('Current password is incorrect', 'error');
+                    } else {
+                        showToast(error.message, 'error');
+                    }
+                } else {
+                    showToast('Password updated successfully!', 'success');
+                    document.getElementById('password-form').reset();
+                }
+            } catch (error) {
+                showToast('Failed to update password. Please try again.', 'error');
+            }
+        });
+        
+        // Password confirmation check
+        document.getElementById('confirm-password').addEventListener('input', function() {
+            const newPassword = document.getElementById('new-password').value;
+            const hint = document.getElementById('password-match-hint');
+            
+            if (this.value && this.value !== newPassword) {
+                hint.classList.remove('hidden');
+                hint.classList.add('text-red-400');
+                this.classList.add('error');
+            } else {
+                hint.classList.add('hidden');
+                this.classList.remove('error');
+                this.classList.add('success');
+            }
+        });
+        
+        // Delete Account
+        function confirmDeleteAccount() {
+            if (confirm('⚠️ Are you sure you want to delete your account? This action cannot be undone.')) {
+                if (confirm('All your data will be permanently removed. Are you absolutely sure?')) {
+                    deleteAccount();
+                }
+            }
+        }
+        
+        async function deleteAccount() {
+            try {
+                // Delete profile (cascade will delete related records)
+                const { error } = await sb
+                    .from('profiles')
+                    .delete()
+                    .eq('id', currentUser.id);
+                
+                if (error) throw error;
+                
+                // Sign out user
+                await sb.auth.signOut();
+                showToast('Account deleted successfully', 'success');
+                setTimeout(() => window.location.href = 'index.html', 2000);
+                
+            } catch (error) {
+                showToast('Failed to delete account. Please contact support.', 'error');
+            }
+        }
+        
+        // Avatar Upload
+        async function uploadAvatar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select an image file', 'error');
+                return;
+            }
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Image must be less than 2MB', 'error');
+                return;
+            }
+            
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `avatar-${currentUser.id}.${fileExt}`;
+                const filePath = `avatars/${fileName}`;
+                
+                const { error: uploadError } = await sb.storage
+                    .from('avatars')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (uploadError) throw uploadError;
+                
+                const { data: urlData } = sb.storage
+                    .from('avatars')
+                    .getPublicUrl(filePath);
+                
+                await sb
+                    .from('profiles')
+                    .update({ avatar_url: urlData.publicUrl })
+                    .eq('id', currentUser.id);
+                
+                const avatar = document.getElementById('avatar-display');
+                avatar.innerHTML = `<img src="${urlData.publicUrl}" class="w-full h-full rounded-full object-cover">`;
+                
+                showToast('Avatar updated successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Avatar upload error:', error);
+                showToast('Failed to upload avatar. Please try again.', 'error');
+            }
+        }
+        
+        // Initialize
+        loadUserData();
+    </script>
+</body>
+</html>

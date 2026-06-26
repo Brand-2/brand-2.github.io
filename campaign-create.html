@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Create Ad Card | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .form-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 1.5rem;
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .upload-area:hover {
+            border-color: rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .upload-area.has-image {
+            border-color: #10b981;
+            padding: 0.5rem;
+        }
+        
+        .upload-preview {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 0.75rem;
+            object-fit: cover;
+        }
+        
+        .remove-image-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 28px;
+            height: 28px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            border: 2px solid #1a1a1a;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .remove-image-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .upload-progress {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .upload-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+        
+        .balance-warning {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 1rem;
+        }
+        
+        .balance-success {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 1rem;
+        }
+        
+        @media (max-width: 640px) {
+            .form-card {
+                margin: 0.5rem;
+                padding: 1.25rem !important;
+            }
+            .upload-area {
+                min-height: 120px;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .ad-preview {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 1rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .ad-preview-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 1rem 1rem 0 0;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .budget-badge {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 2rem;
+            padding: 0.25rem 1rem;
+            font-size: 0.7rem;
+            color: #fbbf24;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Create Ad Card</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Back
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-3xl mx-auto p-4 md:p-6">
+        <!-- Page Header -->
+        <div class="text-center mb-6 md:mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-500/20 rounded-2xl mb-4">
+                <span class="text-3xl">📱</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Create Ad Card</h1>
+            <p class="text-gray-400 text-sm">Create a beautiful ad card that influencers can share with their audience</p>
+            <div class="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <span class="budget-badge">💰 Minimum budget: UGX 1,000</span>
+                <span class="budget-badge">⚡ 10% platform fee</span>
+                <span class="budget-badge">📱 No website needed</span>
+            </div>
+        </div>
+
+        <!-- Balance Check -->
+        <div id="balance-check" class="mb-6">
+            <!-- Will be dynamically populated -->
+        </div>
+
+        <!-- Campaign Form -->
+        <div class="form-card rounded-2xl p-5 md:p-8 fade-in">
+            <form id="campaign-form" class="space-y-5">
+                <!-- Step 1: Ad Content -->
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4">📝 Ad Content</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Image Upload -->
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Ad Image *</label>
+                            <div id="upload-area" class="upload-area relative" onclick="document.getElementById('file-input').click()">
+                                <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                                
+                                <div id="upload-placeholder" class="text-center p-4">
+                                    <div class="text-4xl mb-2">🖼️</div>
+                                    <p class="text-gray-400 text-sm">Click or drag & drop to upload</p>
+                                    <p class="text-gray-500 text-xs mt-1">Supports JPG, PNG, GIF (Max 5MB)</p>
+                                </div>
+                                
+                                <div id="upload-preview-container" class="hidden relative w-full">
+                                    <img id="upload-preview" class="upload-preview w-full" alt="Ad image">
+                                    <button type="button" onclick="removeImage(event)" class="remove-image-btn">×</button>
+                                </div>
+                                
+                                <div id="upload-progress-container" class="hidden w-full px-4">
+                                    <div class="upload-progress">
+                                        <div id="upload-progress-bar" class="upload-progress-bar"></div>
+                                    </div>
+                                    <p id="upload-status" class="text-xs text-gray-400 mt-1">Compressing & uploading...</p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">A good image increases engagement by 80%</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Ad Title *</label>
+                            <input type="text" id="campaign-name" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="e.g., Summer Sale 2026 - 20% Off!">
+                            <p class="text-xs text-gray-500 mt-1">Make it catchy! This is what people will see first</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Ad Description *</label>
+                            <textarea id="campaign-description" rows="4" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="Tell people about your offer, product, or service..."></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Clear descriptions get more engagement (max 500 characters)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t border-gray-800 my-6"></div>
+
+                <!-- Step 2: Contact Information -->
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4">📞 Contact Information</h2>
+                    <p class="text-xs text-gray-400 mb-4">This is how customers will reach you</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Phone Number *</label>
+                            <input type="tel" id="phone-number" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="0771234567">
+                            <p class="text-xs text-gray-500 mt-1">Customers will call this number</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">WhatsApp Number</label>
+                            <input type="tel" id="whatsapp-number"
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="0771234567">
+                            <p class="text-xs text-gray-500 mt-1">Customers can message you on WhatsApp</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Location *</label>
+                            <input type="text" id="location" required
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="e.g., Kampala, Uganda">
+                            <p class="text-xs text-gray-500 mt-1">Customers can find your business location</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Email (Optional)</label>
+                            <input type="email" id="email"
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="info@business.com">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Business Hours</label>
+                            <input type="text" id="business-hours"
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="e.g., Mon-Fri 8am-6pm, Sat 9am-4pm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t border-gray-800 my-6"></div>
+
+                <!-- Step 3: Budget -->
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4">💰 Budget</h2>
+                    <p class="text-xs text-gray-400 mb-4">Set your budget and how much you'll pay per click/view</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-medium mb-1.5">Total Budget (UGX) *</label>
+                            <input type="number" id="budget" required min="1000"
+                                class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                                placeholder="Minimum 1,000">
+                            <p class="text-xs text-gray-500 mt-1">Minimum budget is UGX 1,000 - affordable for everyone!</p>
+                        </div>
+                        
+                        <!-- Auto-Commission Info -->
+                        <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">⚡</span>
+                                <div>
+                                    <h4 class="font-bold text-white text-sm">Auto-Commission: 10%</h4>
+                                    <p class="text-xs text-gray-400">Platform fee automatically applied to every transaction</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 text-sm font-medium mb-1.5">Cost Per Click (UGX)</label>
+                                <input type="number" id="cost-per-click" value="50" min="10" max="500"
+                                    class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                                <p class="text-xs text-gray-500 mt-1">Recommended: 50-100</p>
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 text-sm font-medium mb-1.5">Cost Per View (UGX)</label>
+                                <input type="number" id="cost-per-view" value="25" min="5" max="250"
+                                    class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                                <p class="text-xs text-gray-500 mt-1">Recommended: 25-50</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Estimated Reach -->
+                        <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20">
+                            <h3 class="text-sm font-semibold text-emerald-400 mb-3">📊 Estimated Reach</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Estimated Clicks:</span>
+                                    <span class="text-white font-bold" id="est-clicks">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Estimated Views:</span>
+                                    <span class="text-white font-bold" id="est-views">0</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t border-emerald-500/20">
+                                    <span class="text-gray-400">Platform Fee (10%):</span>
+                                    <span class="text-yellow-500 font-bold" id="est-fee">UGX 0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Influencers Will Earn:</span>
+                                    <span class="text-emerald-500 font-bold" id="est-marketer-earnings">UGX 0</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t border-emerald-500/20">
+                                    <span class="text-gray-400">Total Budget:</span>
+                                    <span class="text-white font-bold text-lg" id="est-total">UGX 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t border-gray-800 my-6"></div>
+
+                <!-- Ad Preview -->
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4">👁️ Ad Preview</h2>
+                    <p class="text-xs text-gray-400 mb-4">This is what customers will see when they click on your ad</p>
+                    
+                    <div class="ad-preview p-4">
+                        <div id="preview-image-container" class="hidden">
+                            <img id="preview-image" class="ad-preview-image" alt="Ad preview">
+                        </div>
+                        <div id="preview-no-image" class="ad-preview-image flex items-center justify-center text-4xl bg-gray-800">
+                            🖼️
+                        </div>
+                        <div class="p-4 space-y-2">
+                            <h3 class="font-bold text-white text-lg" id="preview-title">Your Ad Title</h3>
+                            <p class="text-gray-400 text-sm" id="preview-description">Your description will appear here...</p>
+                            <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+                                <span id="preview-location">📍 Location</span>
+                                <span id="preview-phone">📞 Phone</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <button class="px-3 py-1 bg-green-600 rounded-lg text-white text-xs">💬 WhatsApp</button>
+                                <button class="px-3 py-1 bg-blue-600 rounded-lg text-white text-xs">📞 Call Now</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button type="button" onclick="goBack()" class="btn-secondary flex-1 py-3 rounded-xl text-white font-semibold text-base order-2 sm:order-1">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="saveDraft()" class="btn-secondary flex-1 py-3 rounded-xl text-white font-semibold text-base order-1 sm:order-2 border border-gray-600">
+                        💾 Save Draft
+                    </button>
+                    <button type="submit" id="submit-campaign" class="btn-primary flex-1 py-3 rounded-xl text-white font-semibold text-base order-0">
+                        Publish Ad →
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let currentBusiness = null;
+        let uploadedImageUrl = null;
+        let uploadedFilePath = null;
+        let isUploading = false;
+        let editingCampaignId = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function updatePreview() {
+            // Update preview with current form values
+            const title = document.getElementById('campaign-name').value || 'Your Ad Title';
+            const desc = document.getElementById('campaign-description').value || 'Your description will appear here...';
+            const location = document.getElementById('location').value || '📍 Location';
+            const phone = document.getElementById('phone-number').value || '📞 Phone';
+            
+            document.getElementById('preview-title').textContent = title;
+            document.getElementById('preview-description').textContent = desc;
+            document.getElementById('preview-location').textContent = location ? `📍 ${location}` : '📍 Location';
+            document.getElementById('preview-phone').textContent = phone ? `📞 ${phone}` : '📞 Phone';
+            
+            // Update preview image if uploaded
+            if (uploadedImageUrl) {
+                document.getElementById('preview-image-container').classList.remove('hidden');
+                document.getElementById('preview-no-image').classList.add('hidden');
+                document.getElementById('preview-image').src = uploadedImageUrl;
+            }
+        }
+        
+        // Live preview updates
+        document.getElementById('campaign-name').addEventListener('input', updatePreview);
+        document.getElementById('campaign-description').addEventListener('input', updatePreview);
+        document.getElementById('location').addEventListener('input', updatePreview);
+        document.getElementById('phone-number').addEventListener('input', updatePreview);
+        
+        // ============================================
+        // LOAD USER DATA & BALANCE CHECK
+        // ============================================
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            if (!profile) {
+                window.location.href = 'profile-complete.html';
+                return;
+            }
+            
+            // Check for business profile
+            const { data: business } = await sb
+                .from('businesses')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            
+            if (!business) {
+                showToast('Please create a business profile first', 'warning');
+                setTimeout(() => window.location.href = 'profile.html', 2000);
+                return;
+            }
+            
+            currentBusiness = business;
+            
+            // Check balance
+            const balance = profile.wallet_balance || 0;
+            const balanceCheck = document.getElementById('balance-check');
+            
+            if (balance < 1000) {
+                balanceCheck.innerHTML = `
+                    <div class="balance-warning p-4 flex items-center gap-4">
+                        <span class="text-3xl">⚠️</span>
+                        <div class="flex-1">
+                            <p class="text-white font-semibold text-sm">Low Balance</p>
+                            <p class="text-gray-400 text-xs">You need at least UGX 1,000 to publish an ad. Current balance: <span class="text-red-400 font-bold">UGX ${balance.toLocaleString()}</span></p>
+                        </div>
+                        <button onclick="window.location.href='wallet.html'" class="btn-primary px-4 py-2 rounded-lg text-white text-sm whitespace-nowrap">
+                            Deposit Funds
+                        </button>
+                    </div>
+                `;
+            } else {
+                balanceCheck.innerHTML = `
+                    <div class="balance-success p-4 flex items-center gap-4">
+                        <span class="text-3xl">✅</span>
+                        <div class="flex-1">
+                            <p class="text-white font-semibold text-sm">Balance Available</p>
+                            <p class="text-gray-400 text-xs">You have <span class="text-emerald-400 font-bold">UGX ${balance.toLocaleString()}</span> available. Minimum budget: UGX 1,000</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Check if editing existing campaign
+            const urlParams = new URLSearchParams(window.location.search);
+            const editId = urlParams.get('edit');
+            if (editId) {
+                await loadCampaignForEdit(editId);
+            }
+        }
+        
+        // ============================================
+        // LOAD CAMPAIGN FOR EDIT
+        // ============================================
+        async function loadCampaignForEdit(campaignId) {
+            const { data: campaign } = await sb
+                .from('campaigns')
+                .select('*')
+                .eq('id', campaignId)
+                .eq('business_id', currentBusiness.id)
+                .single();
+            
+            if (!campaign) {
+                showToast('Campaign not found', 'error');
+                return;
+            }
+            
+            editingCampaignId = campaignId;
+            
+            document.getElementById('campaign-name').value = campaign.campaign_name;
+            document.getElementById('campaign-description').value = campaign.campaign_description || '';
+            document.getElementById('phone-number').value = campaign.phone_number || '';
+            document.getElementById('whatsapp-number').value = campaign.whatsapp_number || '';
+            document.getElementById('location').value = campaign.location || '';
+            document.getElementById('email').value = campaign.email || '';
+            document.getElementById('business-hours').value = campaign.business_hours || '';
+            document.getElementById('budget').value = campaign.budget;
+            document.getElementById('cost-per-click').value = campaign.cost_per_click || 50;
+            document.getElementById('cost-per-view').value = campaign.cost_per_view || 25;
+            
+            // Show image if exists
+            if (campaign.media_urls && campaign.media_urls.length > 0) {
+                uploadedImageUrl = campaign.media_urls[0];
+                const previewContainer = document.getElementById('upload-preview-container');
+                const preview = document.getElementById('upload-preview');
+                const placeholder = document.getElementById('upload-placeholder');
+                const uploadArea = document.getElementById('upload-area');
+                
+                preview.src = uploadedImageUrl;
+                previewContainer.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                uploadArea.classList.add('has-image');
+            }
+            
+            document.querySelector('h1').textContent = 'Edit Ad Card';
+            document.getElementById('submit-campaign').textContent = 'Update Ad →';
+            
+            updateEstimates();
+            updatePreview();
+        }
+        
+        // ============================================
+        // IMAGE UPLOAD
+        // ============================================
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            await processFile(file);
+        }
+        
+        async function processFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select an image file', 'error');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image must be less than 5MB', 'error');
+                return;
+            }
+            
+            showUploadProgress('Compressing image...', 0);
+            isUploading = true;
+            
+            try {
+                const compressedFile = await compressImage(file);
+                showUploadProgress('Uploading to storage...', 30);
+                
+                const fileExt = compressedFile.name.split('.').pop();
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+                const filePath = `campaigns/${currentUser.id}/${fileName}`;
+                
+                const { data: uploadData, error: uploadError } = await sb.storage
+                    .from('campaign-images')
+                    .upload(filePath, compressedFile, {
+                        cacheControl: '3600',
+                        upsert: false,
+                        contentType: compressedFile.type
+                    });
+                
+                if (uploadError) {
+                    console.error('Upload error:', uploadError);
+                    showToast('Failed to upload image. Please try again.', 'error');
+                    hideUploadProgress();
+                    isUploading = false;
+                    return;
+                }
+                
+                showUploadProgress('Getting public URL...', 80);
+                
+                const { data: urlData } = sb.storage
+                    .from('campaign-images')
+                    .getPublicUrl(filePath);
+                
+                uploadedFilePath = filePath;
+                uploadedImageUrl = urlData.publicUrl;
+                
+                const previewContainer = document.getElementById('upload-preview-container');
+                const preview = document.getElementById('upload-preview');
+                const placeholder = document.getElementById('upload-placeholder');
+                const uploadArea = document.getElementById('upload-area');
+                
+                preview.src = uploadedImageUrl;
+                previewContainer.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                uploadArea.classList.add('has-image');
+                
+                showUploadProgress('Upload complete!', 100);
+                setTimeout(() => {
+                    hideUploadProgress();
+                    showToast('Image uploaded successfully!', 'success');
+                    updatePreview();
+                }, 500);
+                
+                isUploading = false;
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Failed to process image. Please try again.', 'error');
+                hideUploadProgress();
+                isUploading = false;
+            }
+        }
+        
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                new Compressor(file, {
+                    quality: 0.8,
+                    maxWidth: 1200,
+                    maxHeight: 1200,
+                    convertSize: 1024 * 1024,
+                    success(result) {
+                        resolve(result);
+                    },
+                    error(err) {
+                        reject(err);
+                    },
+                });
+            });
+        }
+        
+        function showUploadProgress(message, percent) {
+            const container = document.getElementById('upload-progress-container');
+            const bar = document.getElementById('upload-progress-bar');
+            const status = document.getElementById('upload-status');
+            
+            container.classList.remove('hidden');
+            bar.style.width = `${percent}%`;
+            status.textContent = message;
+        }
+        
+        function hideUploadProgress() {
+            const container = document.getElementById('upload-progress-container');
+            container.classList.add('hidden');
+        }
+        
+        function removeImage(event) {
+            event.stopPropagation();
+            document.getElementById('file-input').value = '';
+            
+            const previewContainer = document.getElementById('upload-preview-container');
+            const placeholder = document.getElementById('upload-placeholder');
+            const uploadArea = document.getElementById('upload-area');
+            
+            previewContainer.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            uploadArea.classList.remove('has-image');
+            
+            uploadedImageUrl = null;
+            uploadedFilePath = null;
+            showToast('Image removed', 'info');
+            updatePreview();
+        }
+        
+        // Drag and Drop
+        const uploadArea = document.getElementById('upload-area');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+        
+        // ============================================
+        // UPDATE ESTIMATES
+        // ============================================
+        function updateEstimates() {
+            const budget = parseFloat(document.getElementById('budget').value) || 0;
+            const cpc = parseFloat(document.getElementById('cost-per-click').value) || 50;
+            const cpv = parseFloat(document.getElementById('cost-per-view').value) || 25;
+            
+            const estClicks = budget > 0 ? Math.floor(budget / cpc) : 0;
+            const estViews = budget > 0 ? Math.floor(budget / cpv) : 0;
+            const fee = budget * 0.10;
+            const marketerEarnings = budget - fee;
+            
+            document.getElementById('est-clicks').textContent = estClicks.toLocaleString();
+            document.getElementById('est-views').textContent = estViews.toLocaleString();
+            document.getElementById('est-fee').textContent = `UGX ${fee.toLocaleString()}`;
+            document.getElementById('est-marketer-earnings').textContent = `UGX ${marketerEarnings.toLocaleString()}`;
+            document.getElementById('est-total').textContent = `UGX ${budget.toLocaleString()}`;
+        }
+        
+        document.getElementById('budget').addEventListener('input', updateEstimates);
+        document.getElementById('cost-per-click').addEventListener('input', updateEstimates);
+        document.getElementById('cost-per-view').addEventListener('input', updateEstimates);
+        
+        // ============================================
+        // SAVE DRAFT
+        // ============================================
+        async function saveDraft() {
+            const name = document.getElementById('campaign-name').value.trim();
+            const description = document.getElementById('campaign-description').value.trim();
+            const phone = document.getElementById('phone-number').value.trim();
+            const location = document.getElementById('location').value.trim();
+            const budget = parseFloat(document.getElementById('budget').value);
+            
+            if (!name) {
+                showToast('Please enter an ad title', 'warning');
+                return;
+            }
+            
+            if (!description) {
+                showToast('Please enter an ad description', 'warning');
+                return;
+            }
+            
+            if (!phone) {
+                showToast('Please enter a phone number', 'warning');
+                return;
+            }
+            
+            if (!location) {
+                showToast('Please enter a location', 'warning');
+                return;
+            }
+            
+            if (!budget || budget < 1000) {
+                showToast('Minimum budget is UGX 1,000', 'warning');
+                return;
+            }
+            
+            const campaignData = {
+                business_id: currentBusiness.id,
+                campaign_name: name,
+                campaign_description: description,
+                media_urls: uploadedImageUrl ? [uploadedImageUrl] : [],
+                phone_number: phone,
+                whatsapp_number: document.getElementById('whatsapp-number').value.trim() || null,
+                location: location,
+                email: document.getElementById('email').value.trim() || null,
+                business_hours: document.getElementById('business-hours').value.trim() || null,
+                budget: budget,
+                budget_remaining: budget,
+                cost_per_click: parseFloat(document.getElementById('cost-per-click').value) || 50,
+                cost_per_view: parseFloat(document.getElementById('cost-per-view').value) || 25,
+                status: 'draft',
+                is_draft: true,
+                is_ad_card: true,
+                is_smart_campaign: true
+            };
+            
+            try {
+                let result;
+                if (editingCampaignId) {
+                    result = await sb
+                        .from('campaigns')
+                        .update(campaignData)
+                        .eq('id', editingCampaignId)
+                        .eq('business_id', currentBusiness.id);
+                } else {
+                    result = await sb
+                        .from('campaigns')
+                        .insert(campaignData);
+                }
+                
+                if (result.error) throw result.error;
+                
+                showToast('Draft saved successfully!', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                
+            } catch (error) {
+                console.error('Error saving draft:', error);
+                showToast(error.message || 'Failed to save draft', 'error');
+            }
+        }
+        
+        // ============================================
+        // SUBMIT CAMPAIGN
+        // ============================================
+        document.getElementById('campaign-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (isUploading) {
+                showToast('Please wait for image upload to complete', 'warning');
+                return;
+            }
+            
+            const name = document.getElementById('campaign-name').value.trim();
+            const description = document.getElementById('campaign-description').value.trim();
+            const phone = document.getElementById('phone-number').value.trim();
+            const location = document.getElementById('location').value.trim();
+            const budget = parseFloat(document.getElementById('budget').value);
+            const cpc = parseFloat(document.getElementById('cost-per-click').value) || 50;
+            const cpv = parseFloat(document.getElementById('cost-per-view').value) || 25;
+            
+            // Validations
+            if (!name) {
+                showToast('Please enter an ad title', 'warning');
+                return;
+            }
+            
+            if (!description || description.length < 10) {
+                showToast('Please enter a detailed description (min 10 characters)', 'warning');
+                return;
+            }
+            
+            if (description.length > 500) {
+                showToast('Description must be less than 500 characters', 'warning');
+                return;
+            }
+            
+            if (!phone || phone.length < 9) {
+                showToast('Please enter a valid phone number', 'warning');
+                return;
+            }
+            
+            if (!location) {
+                showToast('Please enter a location', 'warning');
+                return;
+            }
+            
+            if (!uploadedImageUrl) {
+                showToast('Please upload an image for your ad', 'warning');
+                return;
+            }
+            
+            if (!budget || budget < 1000) {
+                showToast('Minimum budget is UGX 1,000', 'warning');
+                return;
+            }
+            
+            if (cpc < 10 || cpc > 500) {
+                showToast('Cost per click must be between UGX 10 and 500', 'warning');
+                return;
+            }
+            
+            if (cpv < 5 || cpv > 250) {
+                showToast('Cost per view must be between UGX 5 and 250', 'warning');
+                return;
+            }
+            
+            // Check balance
+            const balance = currentProfile.wallet_balance || 0;
+            if (balance < budget) {
+                showToast(`Insufficient balance. You need UGX ${budget.toLocaleString()} but have UGX ${balance.toLocaleString()}`, 'error');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submit-campaign');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Processing...';
+            submitBtn.disabled = true;
+            
+            try {
+                const campaignData = {
+                    business_id: currentBusiness.id,
+                    campaign_name: name,
+                    campaign_description: description,
+                    media_urls: uploadedImageUrl ? [uploadedImageUrl] : [],
+                    phone_number: phone,
+                    whatsapp_number: document.getElementById('whatsapp-number').value.trim() || null,
+                    location: location,
+                    email: document.getElementById('email').value.trim() || null,
+                    business_hours: document.getElementById('business-hours').value.trim() || null,
+                    budget: budget,
+                    budget_remaining: budget,
+                    cost_per_click: cpc,
+                    cost_per_view: cpv,
+                    status: 'pending',
+                    is_draft: false,
+                    is_ad_card: true,
+                    is_smart_campaign: true,
+                    redirect_url: null  // No redirect - we show the ad card
+                };
+                
+                let campaign;
+                if (editingCampaignId) {
+                    const { data, error } = await sb
+                        .from('campaigns')
+                        .update(campaignData)
+                        .eq('id', editingCampaignId)
+                        .eq('business_id', currentBusiness.id)
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    campaign = data;
+                } else {
+                    const { data, error } = await sb
+                        .from('campaigns')
+                        .insert(campaignData)
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    campaign = data;
+                }
+                
+                // Create transaction (deduct funds)
+                const reference = `AD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                
+                const { error: txError } = await sb
+                    .from('transactions')
+                    .insert({
+                        user_id: currentUser.id,
+                        amount: budget,
+                        fee: 0,
+                        net_amount: budget,
+                        currency: 'UGX',
+                        transaction_type: 'deposit',
+                        status: 'pending',
+                        reference: reference,
+                        campaign_id: campaign.id,
+                        description: `Ad Card deposit: ${name}`,
+                        payment_method: 'wallet'
+                    });
+                
+                if (txError) throw txError;
+                
+                // Deduct from wallet
+                const { error: updateError } = await sb
+                    .from('profiles')
+                    .update({ 
+                        wallet_balance: balance - budget,
+                        total_ad_spend: (currentProfile.total_ad_spend || 0) + budget
+                    })
+                    .eq('id', currentUser.id);
+                
+                if (updateError) throw updateError;
+                
+                showToast('Ad Card submitted successfully! Pending review.', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                
+            } catch (error) {
+                console.error('Campaign submission error:', error);
+                showToast(error.message || 'Failed to submit campaign. Please try again.', 'error');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        loadUserData();
+        updatePreview();
+    </script>
+</body>
+</html>

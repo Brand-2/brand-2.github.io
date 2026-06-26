@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Ad Card | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .ad-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 2rem;
+            max-width: 500px;
+            width: 100%;
+            margin: 1rem auto;
+            overflow: hidden;
+        }
+        
+        .ad-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-whatsapp:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-call {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-call:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:active {
+            transform: scale(0.98);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-inactive { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .review-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 1rem;
+        }
+        
+        .star-filled { color: #f59e0b; }
+        .star-empty { color: #4b5563; }
+        
+        .share-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .share-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .copy-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .contact-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.6rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+        
+        @media (max-width: 640px) {
+            .ad-card {
+                margin: 0.5rem;
+                border-radius: 1.5rem;
+            }
+            .ad-image {
+                height: 200px;
+            }
+            .ad-card {
+                padding: 0 !important;
+            }
+            .ad-content {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-20">
+        <div class="loader"></div>
+        <p class="text-gray-400 mt-4">Loading Ad Card...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="text-center py-20 hidden">
+        <div class="text-6xl mb-4">😕</div>
+        <h3 class="text-xl font-bold text-white mb-2">Ad Not Found</h3>
+        <p class="text-gray-400 text-sm" id="error-message">The ad you're looking for doesn't exist or has been removed.</p>
+        <button onclick="window.location.href='index.html'" class="btn-primary px-6 py-2.5 rounded-lg text-white font-semibold mt-4">
+            Go Home
+        </button>
+    </div>
+
+    <!-- Ad Card Content -->
+    <div id="ad-content" class="hidden w-full max-w-md">
+        <div class="ad-card fade-in">
+            <!-- Image -->
+            <div id="ad-image-container" class="relative">
+                <img id="ad-image" class="ad-image" src="" alt="Ad image">
+                <div class="absolute top-4 right-4">
+                    <span id="ad-status" class="status-badge status-active">✅ Active</span>
+                </div>
+                <div class="absolute bottom-4 left-4 right-4 flex gap-2">
+                    <button onclick="shareAd()" class="flex-1 btn-secondary px-3 py-2 rounded-lg text-white text-sm flex items-center justify-center gap-1">
+                        🔗 Share
+                    </button>
+                    <button onclick="copyLink()" class="flex-1 btn-secondary px-3 py-2 rounded-lg text-white text-sm flex items-center justify-center gap-1">
+                        📋 Copy Link
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="ad-content p-5 md:p-6 space-y-4">
+                <!-- Title & Business -->
+                <div>
+                    <h1 class="text-2xl font-bold text-white" id="ad-title">Ad Title</h1>
+                    <p class="text-emerald-400 text-sm" id="ad-business">Business Name</p>
+                </div>
+                
+                <!-- Description -->
+                <p class="text-gray-300 text-sm leading-relaxed" id="ad-description">Ad description goes here...</p>
+                
+                <!-- Contact Info -->
+                <div class="bg-black/30 rounded-xl p-4 space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-400 w-24">📞 Phone:</span>
+                        <a id="ad-phone" href="tel:" class="text-white hover:text-emerald-400 transition">-</a>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-400 w-24">💬 WhatsApp:</span>
+                        <a id="ad-whatsapp" href="#" class="text-white hover:text-emerald-400 transition">-</a>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-400 w-24">📍 Location:</span>
+                        <span id="ad-location" class="text-white">-</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-400 w-24">📧 Email:</span>
+                        <a id="ad-email" href="mailto:" class="text-white hover:text-emerald-400 transition">-</a>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-400 w-24">🕐 Hours:</span>
+                        <span id="ad-hours" class="text-white">-</span>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 gap-3">
+                    <a id="ad-call-btn" href="tel:" class="btn-call py-3 rounded-xl text-white font-semibold text-center text-sm">
+                        📞 Call Now
+                    </a>
+                    <a id="ad-whatsapp-btn" href="#" class="btn-whatsapp py-3 rounded-xl text-white font-semibold text-center text-sm">
+                        💬 WhatsApp
+                    </a>
+                </div>
+                
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-2 text-center pt-3 border-t border-gray-800">
+                    <div>
+                        <div class="text-emerald-500 font-bold text-lg" id="ad-views">0</div>
+                        <div class="text-gray-500 text-xs">Views</div>
+                    </div>
+                    <div>
+                        <div class="text-emerald-500 font-bold text-lg" id="ad-clicks">0</div>
+                        <div class="text-gray-500 text-xs">Clicks</div>
+                    </div>
+                    <div>
+                        <div class="text-emerald-500 font-bold text-lg" id="ad-likes">0</div>
+                        <div class="text-gray-500 text-xs">Likes</div>
+                    </div>
+                </div>
+                
+                <!-- Rating -->
+                <div class="flex items-center gap-2 pt-2">
+                    <div id="ad-stars" class="flex text-lg">⭐⭐⭐⭐⭐</div>
+                    <span id="ad-rating" class="text-white font-bold text-sm">0.0</span>
+                    <span class="text-gray-500 text-sm">( <span id="ad-reviews-count">0</span> reviews )</span>
+                </div>
+                
+                <!-- Like Button -->
+                <button onclick="toggleLike()" id="like-btn" class="w-full btn-secondary py-2.5 rounded-lg text-white text-sm flex items-center justify-center gap-2">
+                    <span id="like-icon">🤍</span>
+                    <span id="like-text">Like this Ad</span>
+                </button>
+                
+                <!-- Review Section -->
+                <div class="pt-3 border-t border-gray-800">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-sm font-bold text-white">💬 Reviews</h4>
+                        <button onclick="showReviewModal()" class="text-emerald-500 text-xs hover:text-emerald-400 transition">
+                            Write Review
+                        </button>
+                    </div>
+                    <div id="reviews-list" class="space-y-3 max-h-60 overflow-y-auto">
+                        <div class="text-center text-gray-500 text-sm py-4">No reviews yet. Be the first!</div>
+                    </div>
+                </div>
+                
+                <!-- Commission Info -->
+                <div class="text-center pt-2 border-t border-gray-800">
+                    <p class="text-xs text-gray-500">
+                        ⚡ 10% platform fee applies | Brand 2
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Write a Review</h3>
+                <button onclick="closeReviewModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Your Rating</label>
+                <div id="rating-stars" class="flex gap-1 text-3xl cursor-pointer">
+                    <span onclick="setRating(1)" id="star-1" class="hover:scale-110 transition">☆</span>
+                    <span onclick="setRating(2)" id="star-2" class="hover:scale-110 transition">☆</span>
+                    <span onclick="setRating(3)" id="star-3" class="hover:scale-110 transition">☆</span>
+                    <span onclick="setRating(4)" id="star-4" class="hover:scale-110 transition">☆</span>
+                    <span onclick="setRating(5)" id="star-5" class="hover:scale-110 transition">☆</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1" id="rating-label">Tap a star to rate</p>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Comment</label>
+                <textarea id="review-comment" rows="4" 
+                    class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base bg-black/30 border border-gray-700 focus:border-emerald-500 focus:outline-none"
+                    placeholder="What do you think about this ad?"></textarea>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="submitReview()" class="flex-1 btn-primary py-3 rounded-xl text-white font-semibold text-base">
+                    Submit Review
+                </button>
+                <button onclick="closeReviewModal()" class="flex-1 btn-secondary py-3 rounded-xl text-white font-semibold text-base">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Share This Ad</h3>
+                <button onclick="closeShareModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <p class="text-gray-400 text-sm mb-4">Share this ad with your friends and followers!</p>
+            
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="share-link-input" readonly
+                    class="flex-1 px-3 py-2 rounded-lg bg-black/50 border border-gray-700 text-white text-sm">
+                <button onclick="copyShareLink()" class="copy-btn px-4 py-2 bg-emerald-500 rounded-lg text-white font-semibold text-sm">
+                    Copy
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="shareOnWhatsApp()" class="py-2 bg-green-600 rounded-lg text-white text-sm font-medium">📱 WhatsApp</button>
+                <button onclick="shareOnFacebook()" class="py-2 bg-blue-600 rounded-lg text-white text-sm font-medium">📘 Facebook</button>
+                <button onclick="shareOnTwitter()" class="py-2 bg-black border border-gray-700 rounded-lg text-white text-sm font-medium">🐦 Twitter</button>
+                <button onclick="shareOnTelegram()" class="py-2 bg-blue-500 rounded-lg text-white text-sm font-medium">📨 Telegram</button>
+                <button onclick="shareOnTikTok()" class="py-2 bg-black border border-gray-700 rounded-lg text-white text-sm font-medium">🎵 TikTok</button>
+                <button onclick="shareOnInstagram()" class="py-2 bg-pink-600 rounded-lg text-white text-sm font-medium">📷 Instagram</button>
+            </div>
+            
+            <div class="mt-4">
+                <button onclick="closeShareModal()" class="w-full py-2 rounded-lg bg-gray-800 text-white font-medium text-sm">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <style>
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+    </style>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let campaignId = null;
+        let campaignData = null;
+        let currentUser = null;
+        let selectedRating = 0;
+        let hasLiked = false;
+        let shareLink = '';
+        
+        // Tracking related variables
+        let influencerId = null;
+        let shareId = null;
+        let isTracked = false;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        // ============================================
+        // TRACKING - BUILT IN
+        // ============================================
+        async function trackViewAndClick() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedRef = urlParams.get('ref');
+            
+            // If no ref, just show the ad normally (direct visit)
+            if (!encodedRef) {
+                return;
+            }
+            
+            try {
+                // Decode the reference
+                const refString = atob(encodedRef);
+                const parts = refString.split('_');
+                
+                if (parts.length < 2) return;
+                
+                influencerId = parts[0];
+                const trackedCampaignId = parts[1];
+                
+                // If campaign ID doesn't match URL param, use the one from ref
+                if (!campaignId) {
+                    campaignId = trackedCampaignId;
+                } else if (campaignId !== trackedCampaignId) {
+                    // Mismatch - ignore
+                    return;
+                }
+                
+                // Find or create share record
+                let { data: share, error: shareError } = await sb
+                    .from('influence_links')
+                    .select('id, total_clicks, total_views')
+                    .eq('campaign_id', campaignId)
+                    .eq('influencer_id', influencerId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+                
+                // If no share record exists, create one
+                if (!share) {
+                    const uniqueLink = `${window.location.origin}/ad-card.html?ref=${encodedRef}`;
+                    const { data: newShare, error: createError } = await sb
+                        .from('influence_links')
+                        .insert({
+                            campaign_id: campaignId,
+                            influencer_id: influencerId,
+                            unique_link: uniqueLink,
+                            is_active: true
+                        })
+                        .select()
+                        .single();
+                    
+                    if (!createError) {
+                        share = newShare;
+                    } else {
+                        console.error('Error creating share:', createError);
+                        return;
+                    }
+                }
+                
+                shareId = share.id;
+                
+                // Get IP address
+                let ipAddress = null;
+                try {
+                    const ipResponse = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipResponse.json();
+                    ipAddress = ipData.ip;
+                } catch (ipError) {
+                    console.error('Could not fetch IP:', ipError);
+                }
+                
+                // Record VIEW (always track a view when page loads from a shared link)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const { count } = await sb
+                    .from('track_events')
+                    .select('id', { count: 'exact' })
+                    .eq('share_id', share.id)
+                    .eq('event_type', 'view')
+                    .gte('created_at', today.toISOString());
+                
+                if (count === 0 || !count) {
+                    // Track view
+                    await sb
+                        .from('track_events')
+                        .insert({
+                            share_id: share.id,
+                            campaign_id: campaignId,
+                            influencer_id: influencerId,
+                            event_type: 'view',
+                            ip_address: ipAddress,
+                            user_agent: navigator.userAgent,
+                            referrer: document.referrer || null,
+                            is_valid: true
+                        });
+                    
+                    // Update share view count
+                    await sb
+                        .from('influence_links')
+                        .update({ 
+                            total_views: (share.total_views || 0) + 1
+                        })
+                        .eq('id', share.id);
+                    
+                    // Update campaign view count
+                    await sb
+                        .from('campaigns')
+                        .update({ 
+                            total_views: (campaignData.total_views || 0) + 1,
+                            budget_remaining: campaignData.budget_remaining - campaignData.cost_per_view
+                        })
+                        .eq('id', campaignId);
+                    
+                    // Update local campaign data
+                    campaignData.total_views = (campaignData.total_views || 0) + 1;
+                    campaignData.budget_remaining = campaignData.budget_remaining - campaignData.cost_per_view;
+                    
+                    // Update UI
+                    document.getElementById('ad-views').textContent = campaignData.total_views;
+                }
+                
+                // Record CLICK (track click once per session)
+                if (!sessionStorage.getItem(`clicked_${campaignId}`)) {
+                    sessionStorage.setItem(`clicked_${campaignId}`, 'true');
+                    
+                    await sb
+                        .from('track_events')
+                        .insert({
+                            share_id: share.id,
+                            campaign_id: campaignId,
+                            influencer_id: influencerId,
+                            event_type: 'click',
+                            ip_address: ipAddress,
+                            user_agent: navigator.userAgent,
+                            referrer: document.referrer || null,
+                            is_valid: true
+                        });
+                    
+                    // Update share click count
+                    await sb
+                        .from('influence_links')
+                        .update({ 
+                            total_clicks: (share.total_clicks || 0) + 1
+                        })
+                        .eq('id', share.id);
+                    
+                    // Update campaign click count
+                    await sb
+                        .from('campaigns')
+                        .update({ 
+                            total_clicks: (campaignData.total_clicks || 0) + 1,
+                            budget_remaining: campaignData.budget_remaining - campaignData.cost_per_click
+                        })
+                        .eq('id', campaignId);
+                    
+                    // Update local campaign data
+                    campaignData.total_clicks = (campaignData.total_clicks || 0) + 1;
+                    campaignData.budget_remaining = campaignData.budget_remaining - campaignData.cost_per_click;
+                    
+                    // Update UI
+                    document.getElementById('ad-clicks').textContent = campaignData.total_clicks;
+                }
+                
+                isTracked = true;
+                
+            } catch (error) {
+                console.error('Tracking error:', error);
+                // Don't show error to user - just continue showing the ad
+            }
+        }
+        
+        // ============================================
+        // LOAD AD CARD
+        // ============================================
+        async function loadAdCard() {
+            const urlParams = new URLSearchParams(window.location.search);
+            campaignId = urlParams.get('id');
+            
+            // If no id in URL, check if we have it from tracking
+            if (!campaignId) {
+                const encodedRef = urlParams.get('ref');
+                if (encodedRef) {
+                    try {
+                        const refString = atob(encodedRef);
+                        const parts = refString.split('_');
+                        if (parts.length >= 2) {
+                            campaignId = parts[1];
+                        }
+                    } catch (e) {
+                        console.error('Error decoding ref:', e);
+                    }
+                }
+            }
+            
+            if (!campaignId) {
+                showError('No ad ID provided.');
+                return;
+            }
+            
+            try {
+                // Get campaign data
+                const { data: campaign, error } = await sb
+                    .from('campaigns')
+                    .select(`
+                        *,
+                        businesses!campaigns_business_id_fkey (
+                            business_name,
+                            business_logo
+                        )
+                    `)
+                    .eq('id', campaignId)
+                    .single();
+                
+                if (error || !campaign) {
+                    showError('Ad not found or has been removed.');
+                    return;
+                }
+                
+                campaignData = campaign;
+                
+                // Check if campaign is active
+                if (campaign.status !== 'active' && campaign.status !== 'pending') {
+                    showError('This ad is not currently active.');
+                    return;
+                }
+                
+                // Check if user is logged in
+                const { data: { user } } = await sb.auth.getUser();
+                currentUser = user;
+                
+                // Render ad card
+                renderAdCard(campaign);
+                
+                // Load reviews
+                await loadReviews();
+                
+                // TRACK VIEW & CLICK - Background async
+                await trackViewAndClick();
+                
+                // Check if user has liked
+                if (currentUser) {
+                    await checkUserLike();
+                }
+                
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('ad-content').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error loading ad:', error);
+                showError('An error occurred while loading the ad.');
+            }
+        }
+        
+        function renderAdCard(campaign) {
+            // Image
+            const imageUrl = campaign.media_urls && campaign.media_urls.length > 0 
+                ? campaign.media_urls[0] 
+                : 'https://placehold.co/600x400/1a1a1a/34d399?text=No+Image';
+            document.getElementById('ad-image').src = imageUrl;
+            
+            // Title & Business
+            document.getElementById('ad-title').textContent = campaign.campaign_name || 'Untitled Ad';
+            document.getElementById('ad-business').textContent = campaign.businesses?.business_name || 'Business';
+            
+            // Description
+            document.getElementById('ad-description').textContent = campaign.campaign_description || 'No description available.';
+            
+            // Contact Info
+            document.getElementById('ad-phone').textContent = campaign.phone_number || 'Not provided';
+            document.getElementById('ad-phone').href = `tel:${campaign.phone_number || ''}`;
+            
+            document.getElementById('ad-whatsapp').textContent = campaign.whatsapp_number || 'Not provided';
+            if (campaign.whatsapp_number) {
+                document.getElementById('ad-whatsapp').href = `https://wa.me/${campaign.whatsapp_number.replace(/[^0-9]/g, '')}`;
+                document.getElementById('ad-whatsapp-btn').href = `https://wa.me/${campaign.whatsapp_number.replace(/[^0-9]/g, '')}`;
+            } else {
+                document.getElementById('ad-whatsapp').href = '#';
+                document.getElementById('ad-whatsapp-btn').href = '#';
+                document.getElementById('ad-whatsapp-btn').classList.add('opacity-50', 'pointer-events-none');
+            }
+            
+            document.getElementById('ad-location').textContent = campaign.location || 'Not provided';
+            document.getElementById('ad-email').textContent = campaign.email || 'Not provided';
+            document.getElementById('ad-email').href = `mailto:${campaign.email || ''}`;
+            document.getElementById('ad-hours').textContent = campaign.business_hours || 'Not specified';
+            
+            // Call button
+            document.getElementById('ad-call-btn').href = `tel:${campaign.phone_number || ''}`;
+            if (!campaign.phone_number) {
+                document.getElementById('ad-call-btn').classList.add('opacity-50', 'pointer-events-none');
+            }
+            
+            // Stats
+            document.getElementById('ad-views').textContent = campaign.total_views || 0;
+            document.getElementById('ad-clicks').textContent = campaign.total_clicks || 0;
+            document.getElementById('ad-likes').textContent = campaign.likes_count || 0;
+            
+            // Rating
+            const rating = campaign.rating || 0;
+            document.getElementById('ad-rating').textContent = rating.toFixed(1);
+            document.getElementById('ad-reviews-count').textContent = campaign.total_reviews || 0;
+            updateStars(rating);
+            
+            // Status
+            const statusBadge = document.getElementById('ad-status');
+            if (campaign.status === 'active') {
+                statusBadge.textContent = '✅ Active';
+                statusBadge.className = 'status-badge status-active';
+            } else {
+                statusBadge.textContent = '⏳ Pending';
+                statusBadge.className = 'status-badge status-inactive';
+            }
+            
+            // Share link
+            shareLink = `${window.location.origin}/ad-card.html?id=${campaign.id}`;
+            document.getElementById('share-link-input').value = shareLink;
+        }
+        
+        // ============================================
+        // STARS RATING
+        // ============================================
+        function updateStars(rating) {
+            const stars = document.getElementById('ad-stars');
+            const full = Math.floor(rating);
+            const half = rating % 1 >= 0.5 ? 1 : 0;
+            const empty = 5 - full - half;
+            
+            let html = '';
+            for (let i = 0; i < full; i++) html += '⭐';
+            if (half) html += '⭐';
+            for (let i = 0; i < empty; i++) html += '☆';
+            stars.innerHTML = html || '☆☆☆☆☆';
+        }
+        
+        // ============================================
+        // REVIEWS
+        // ============================================
+        async function loadReviews() {
+            const { data: reviews, error } = await sb
+                .from('ad_reviews')
+                .select(`
+                    *,
+                    profiles!ad_reviews_user_id_fkey (
+                        full_name,
+                        email
+                    )
+                `)
+                .eq('campaign_id', campaignId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+            
+            if (error || !reviews || reviews.length === 0) {
+                document.getElementById('reviews-list').innerHTML = `
+                    <div class="text-center text-gray-500 text-sm py-4">No reviews yet. Be the first!</div>
+                `;
+                return;
+            }
+            
+            const html = reviews.map(r => `
+                <div class="review-card">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-medium text-white text-sm">${r.profiles?.full_name || 'Anonymous'}</div>
+                            <div class="flex text-sm">${'⭐'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+                        </div>
+                        <div class="text-xs text-gray-500">${new Date(r.created_at).toLocaleDateString()}</div>
+                    </div>
+                    ${r.comment ? `<p class="text-gray-400 text-sm mt-2">${r.comment}</p>` : ''}
+                </div>
+            `).join('');
+            
+            document.getElementById('reviews-list').innerHTML = html;
+        }
+        
+        // ============================================
+        // LIKE FUNCTIONALITY
+        // ============================================
+        async function checkUserLike() {
+            const { data, error } = await sb
+                .from('ad_likes')
+                .select('id')
+                .eq('campaign_id', campaignId)
+                .eq('user_id', currentUser.id)
+                .single();
+            
+            if (data) {
+                hasLiked = true;
+                document.getElementById('like-icon').textContent = '❤️';
+                document.getElementById('like-text').textContent = 'Liked!';
+                document.getElementById('like-btn').classList.add('border-red-500/30', 'bg-red-500/10');
+            }
+        }
+        
+        async function toggleLike() {
+            if (!currentUser) {
+                showToast('Please login to like this ad', 'warning');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+            
+            try {
+                if (hasLiked) {
+                    const { error } = await sb
+                        .from('ad_likes')
+                        .delete()
+                        .eq('campaign_id', campaignId)
+                        .eq('user_id', currentUser.id);
+                    
+                    if (error) throw error;
+                    
+                    hasLiked = false;
+                    document.getElementById('like-icon').textContent = '🤍';
+                    document.getElementById('like-text').textContent = 'Like this Ad';
+                    document.getElementById('like-btn').classList.remove('border-red-500/30', 'bg-red-500/10');
+                    
+                    const likes = parseInt(document.getElementById('ad-likes').textContent) - 1;
+                    document.getElementById('ad-likes').textContent = likes;
+                    
+                } else {
+                    const { error } = await sb
+                        .from('ad_likes')
+                        .insert({
+                            campaign_id: campaignId,
+                            user_id: currentUser.id
+                        });
+                    
+                    if (error) throw error;
+                    
+                    hasLiked = true;
+                    document.getElementById('like-icon').textContent = '❤️';
+                    document.getElementById('like-text').textContent = 'Liked!';
+                    document.getElementById('like-btn').classList.add('border-red-500/30', 'bg-red-500/10');
+                    
+                    const likes = parseInt(document.getElementById('ad-likes').textContent) + 1;
+                    document.getElementById('ad-likes').textContent = likes;
+                }
+            } catch (error) {
+                console.error('Error toggling like:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+        
+        // ============================================
+        // REVIEW MODAL
+        // ============================================
+        function setRating(rating) {
+            selectedRating = rating;
+            
+            for (let i = 1; i <= 5; i++) {
+                const star = document.getElementById(`star-${i}`);
+                if (i <= rating) {
+                    star.textContent = '⭐';
+                    star.classList.add('text-yellow-500');
+                } else {
+                    star.textContent = '☆';
+                    star.classList.remove('text-yellow-500');
+                }
+            }
+            
+            const labels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+            document.getElementById('rating-label').textContent = labels[rating] || 'Tap a star to rate';
+        }
+        
+        function showReviewModal() {
+            if (!currentUser) {
+                showToast('Please login to write a review', 'warning');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+            
+            selectedRating = 0;
+            document.getElementById('review-comment').value = '';
+            document.getElementById('rating-label').textContent = 'Tap a star to rate';
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById(`star-${i}`).textContent = '☆';
+                document.getElementById(`star-${i}`).classList.remove('text-yellow-500');
+            }
+            document.getElementById('review-modal').classList.remove('hidden');
+        }
+        
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.add('hidden');
+        }
+        
+        async function submitReview() {
+            if (!selectedRating) {
+                showToast('Please select a rating', 'warning');
+                return;
+            }
+            
+            const comment = document.getElementById('review-comment').value.trim();
+            
+            try {
+                const { error } = await sb
+                    .from('ad_reviews')
+                    .insert({
+                        campaign_id: campaignId,
+                        user_id: currentUser.id,
+                        rating: selectedRating,
+                        comment: comment || null
+                    });
+                
+                if (error) throw error;
+                
+                showToast('Review submitted successfully!', 'success');
+                closeReviewModal();
+                await loadReviews();
+                
+                const { data: reviews } = await sb
+                    .from('ad_reviews')
+                    .select('rating')
+                    .eq('campaign_id', campaignId);
+                
+                const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+                document.getElementById('ad-rating').textContent = avgRating.toFixed(1);
+                document.getElementById('ad-reviews-count').textContent = reviews.length;
+                updateStars(avgRating);
+                
+                await sb
+                    .from('campaigns')
+                    .update({
+                        rating: avgRating,
+                        total_reviews: reviews.length
+                    })
+                    .eq('id', campaignId);
+                
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+        
+        // ============================================
+        // SHARE MODAL
+        // ============================================
+        function shareAd() {
+            document.getElementById('share-modal').classList.remove('hidden');
+        }
+        
+        function closeShareModal() {
+            document.getElementById('share-modal').classList.add('hidden');
+        }
+        
+        function copyLink() {
+            const link = `${window.location.origin}/ad-card.html?id=${campaignId}`;
+            navigator.clipboard.writeText(link);
+            showToast('Link copied to clipboard!', 'success');
+        }
+        
+        function copyShareLink() {
+            navigator.clipboard.writeText(shareLink);
+            showToast('Link copied to clipboard!', 'success');
+        }
+        
+        function shareOnWhatsApp() {
+            window.open(`https://wa.me/?text=${encodeURIComponent('Check out this ad! ' + shareLink)}`, '_blank');
+            closeShareModal();
+        }
+        
+        function shareOnFacebook() {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`, '_blank');
+            closeShareModal();
+        }
+        
+        function shareOnTwitter() {
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out this ad on Brand 2!')}&url=${encodeURIComponent(shareLink)}`, '_blank');
+            closeShareModal();
+        }
+        
+        function shareOnTelegram() {
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent('Check out this ad!')}`, '_blank');
+            closeShareModal();
+        }
+        
+        function shareOnTikTok() {
+            navigator.clipboard.writeText(shareLink);
+            showToast('Link copied! Open TikTok and share it with your followers.', 'success');
+            closeShareModal();
+        }
+        
+        function shareOnInstagram() {
+            navigator.clipboard.writeText(shareLink);
+            showToast('Link copied! Share it in your Instagram bio or stories.', 'success');
+            closeShareModal();
+        }
+        
+        // ============================================
+        // ERROR HANDLING
+        // ============================================
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+        }
+        
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        loadAdCard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Admin - Campaigns | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .campaign-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .campaign-card:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-draft { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        .status-completed { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .status-paused { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            transition: width 0.5s ease;
+            border-radius: 2px;
+        }
+        
+        .admin-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 640px) {
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .campaign-card {
+                padding: 1rem;
+            }
+            .modal-content {
+                margin: 1rem;
+                padding: 1.25rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .filter-btn {
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+        }
+        
+        .filter-btn.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .campaign-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        @media (max-width: 640px) {
+            .campaign-image {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+                    <span class="admin-badge hidden sm:inline">🔑 Admin</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Admin - Campaigns</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">Campaign Management</h1>
+                <p class="text-gray-400 text-sm">Review, approve, and manage all campaigns</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="admin-badge">🔑 Admin Access</span>
+                <span class="text-gray-400 text-sm" id="refresh-timer">🔄 30s</span>
+            </div>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Total</div>
+                <div class="text-xl md:text-2xl font-bold text-white" id="total-campaigns">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Pending</div>
+                <div class="text-xl md:text-2xl font-bold text-yellow-500" id="pending-campaigns">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Active</div>
+                <div class="text-xl md:text-2xl font-bold text-emerald-500" id="active-campaigns">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Total Budget</div>
+                <div class="text-xl md:text-2xl font-bold text-white" id="total-budget">UGX 0</div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-6">
+            <div class="flex-1">
+                <input type="text" id="search-campaign" placeholder="🔍 Search by name, business or description..."
+                    class="search-input w-full px-4 py-2.5 text-white placeholder-gray-500 text-sm">
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="filterCampaigns('all')" id="filter-all" class="filter-btn active px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">All</button>
+                <button onclick="filterCampaigns('pending')" id="filter-pending" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">⏳ Pending</button>
+                <button onclick="filterCampaigns('active')" id="filter-active" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">✅ Active</button>
+                <button onclick="filterCampaigns('draft')" id="filter-draft" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">💾 Draft</button>
+                <button onclick="filterCampaigns('completed')" id="filter-completed" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">📊 Completed</button>
+                <button onclick="filterCampaigns('rejected')" id="filter-rejected" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">❌ Rejected</button>
+                <button onclick="filterCampaigns('paused')" id="filter-paused" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">⏸️ Paused</button>
+            </div>
+        </div>
+
+        <!-- Campaigns List -->
+        <div id="campaigns-list" class="space-y-4">
+            <div class="text-center text-gray-500 py-20">
+                <div class="loader mx-auto mb-4"></div>
+                <p>Loading campaigns...</p>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-20 hidden">
+            <div class="text-6xl mb-4">📭</div>
+            <h3 class="text-xl font-bold text-white mb-2">No Campaigns Found</h3>
+            <p class="text-gray-400">There are no campaigns matching your criteria</p>
+        </div>
+    </div>
+
+    <!-- Review Campaign Modal -->
+    <div id="review-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-8 max-w-2xl w-full modal-content max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Review Campaign</h3>
+                <button onclick="closeReviewModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <div id="campaign-details" class="space-y-4">
+                <!-- Image -->
+                <div id="review-image-container" class="hidden">
+                    <img id="review-image" class="w-full rounded-xl max-h-64 object-cover" alt="Campaign image">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-gray-400 text-xs block">Campaign Name</label>
+                        <p class="text-white font-medium" id="review-name">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Business</label>
+                        <p class="text-white font-medium" id="review-business">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Budget</label>
+                        <p class="text-emerald-500 font-bold" id="review-budget">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Remaining</label>
+                        <p class="text-white" id="review-remaining">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Cost Per Click</label>
+                        <p class="text-white" id="review-cpc">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Cost Per View</label>
+                        <p class="text-white" id="review-cpv">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Category</label>
+                        <p class="text-white" id="review-category">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Target Audience</label>
+                        <p class="text-white" id="review-audience">-</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-gray-400 text-xs block">Description</label>
+                        <p class="text-gray-300 text-sm" id="review-description">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Smart Campaign</label>
+                        <p class="text-yellow-500 font-medium" id="review-smart">-</p>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-xs block">Commission</label>
+                        <p class="text-yellow-500 font-medium" id="review-commission">-</p>
+                    </div>
+                </div>
+                
+                <!-- Stats -->
+                <div class="bg-black/30 rounded-xl p-4">
+                    <h4 class="text-sm font-semibold text-gray-300 mb-3">📊 Campaign Stats</h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <span class="text-gray-400">Total Clicks:</span>
+                            <span class="text-white font-medium" id="review-clicks">0</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Total Views:</span>
+                            <span class="text-white font-medium" id="review-views">0</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Created:</span>
+                            <span class="text-gray-300 text-xs" id="review-created">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Status:</span>
+                            <span id="review-status-badge" class="status-badge">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div id="review-actions" class="flex flex-wrap gap-3 mt-6">
+                <button onclick="approveCampaign()" class="flex-1 btn-success py-3 rounded-xl text-white font-semibold text-base min-w-[120px]">
+                    ✅ Approve
+                </button>
+                <button onclick="showRejectReason()" class="flex-1 btn-danger py-3 rounded-xl text-white font-semibold text-base min-w-[120px]">
+                    ❌ Reject
+                </button>
+                <button onclick="closeReviewModal()" class="flex-1 btn-secondary py-3 rounded-xl text-white font-semibold text-base min-w-[120px]">
+                    Cancel
+                </button>
+            </div>
+            
+            <!-- Admin Info -->
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-500 flex items-center gap-2">
+                    <span>🔑</span>
+                    <span>You are reviewing as <span class="text-emerald-400 font-medium" id="admin-name-display">Administrator</span></span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject Reason Modal -->
+    <div id="reject-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-8 max-w-md w-full modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Reject Campaign</h3>
+                <button onclick="closeRejectModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Rejection Reason *</label>
+                <textarea id="reject-reason" rows="4" 
+                    class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                    placeholder="Why is this campaign being rejected?"></textarea>
+                <p class="text-xs text-gray-500 mt-1">This reason will be shown to the business owner</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="confirmRejectCampaign()" class="flex-1 btn-danger py-3 rounded-xl text-white font-semibold text-base">
+                    Confirm Reject
+                </button>
+                <button onclick="closeRejectModal()" class="flex-1 btn-secondary py-3 rounded-xl text-white font-semibold text-base">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let allCampaigns = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let selectedCampaignId = null;
+        let refreshTimer = 30;
+        let refreshInterval = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard-admin.html';
+        }
+        
+        function openReviewModal(campaignId) {
+            selectedCampaignId = campaignId;
+            const campaign = allCampaigns.find(c => c.id === campaignId);
+            
+            if (!campaign) return;
+            
+            document.getElementById('review-name').textContent = campaign.campaign_name;
+            document.getElementById('review-business').textContent = campaign.businesses?.business_name || 'Unknown';
+            document.getElementById('review-budget').textContent = `UGX ${campaign.budget.toLocaleString()}`;
+            document.getElementById('review-remaining').textContent = `UGX ${campaign.budget_remaining.toLocaleString()}`;
+            document.getElementById('review-cpc').textContent = `UGX ${campaign.cost_per_click}`;
+            document.getElementById('review-cpv').textContent = `UGX ${campaign.cost_per_view}`;
+            document.getElementById('review-category').textContent = campaign.target_audience?.category || 'N/A';
+            document.getElementById('review-audience').textContent = campaign.target_audience?.audience || 'General';
+            document.getElementById('review-description').textContent = campaign.campaign_description || 'No description';
+            document.getElementById('review-clicks').textContent = campaign.total_clicks || 0;
+            document.getElementById('review-views').textContent = campaign.total_views || 0;
+            document.getElementById('review-created').textContent = new Date(campaign.created_at).toLocaleString();
+            
+            // Smart campaign info
+            const isSmart = campaign.is_smart_campaign || false;
+            document.getElementById('review-smart').textContent = isSmart ? '✅ Yes (10% commission)' : '❌ No';
+            document.getElementById('review-smart').className = isSmart ? 'text-yellow-500 font-medium' : 'text-gray-400';
+            document.getElementById('review-commission').textContent = isSmart ? `10%` : '0%';
+            
+            // Status badge
+            const statusMap = {
+                pending: { class: 'status-pending', text: '⏳ Pending' },
+                active: { class: 'status-active', text: '✅ Active' },
+                draft: { class: 'status-draft', text: '💾 Draft' },
+                completed: { class: 'status-completed', text: '📊 Completed' },
+                rejected: { class: 'status-rejected', text: '❌ Rejected' },
+                paused: { class: 'status-paused', text: '⏸️ Paused' }
+            };
+            const status = statusMap[campaign.status] || statusMap.pending;
+            const badge = document.getElementById('review-status-badge');
+            badge.textContent = status.text;
+            badge.className = `status-badge ${status.class}`;
+            
+            // Show/hide image
+            const imageContainer = document.getElementById('review-image-container');
+            const image = document.getElementById('review-image');
+            if (campaign.media_urls && campaign.media_urls.length > 0 && campaign.media_urls[0]) {
+                imageContainer.classList.remove('hidden');
+                image.src = campaign.media_urls[0];
+            } else {
+                imageContainer.classList.add('hidden');
+            }
+            
+            // Show/hide actions based on status
+            const actions = document.getElementById('review-actions');
+            if (campaign.status === 'pending') {
+                actions.classList.remove('hidden');
+            } else {
+                actions.classList.add('hidden');
+            }
+            
+            document.getElementById('review-modal').classList.remove('hidden');
+        }
+        
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.add('hidden');
+            selectedCampaignId = null;
+        }
+        
+        function showRejectReason() {
+            closeReviewModal();
+            document.getElementById('reject-modal').classList.remove('hidden');
+        }
+        
+        function closeRejectModal() {
+            document.getElementById('reject-modal').classList.add('hidden');
+            document.getElementById('reject-reason').value = '';
+        }
+        
+        async function approveCampaign() {
+            if (!selectedCampaignId) return;
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+            
+            try {
+                const { data: { user } } = await sb.auth.getUser();
+                if (!user) throw new Error('Admin not authenticated');
+                
+                // Verify admin status
+                const { data: adminCheck } = await sb
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!adminCheck?.is_admin) {
+                    throw new Error('You do not have admin privileges');
+                }
+                
+                const { error } = await sb
+                    .from('campaigns')
+                    .update({
+                        status: 'active',
+                        approved_by: user.id,
+                        approved_at: new Date().toISOString()
+                    })
+                    .eq('id', selectedCampaignId);
+                
+                if (error) throw error;
+                
+                // Create notification for business
+                await sb
+                    .from('notifications')
+                    .insert({
+                        user_id: allCampaigns.find(c => c.id === selectedCampaignId)?.businesses?.user_id,
+                        title: '✅ Campaign Approved!',
+                        message: 'Your campaign has been approved and is now active. Influencers can start sharing it.',
+                        type: 'campaign_approved'
+                    });
+                
+                showToast('✅ Campaign approved successfully!', 'success');
+                closeReviewModal();
+                closeRejectModal();
+                loadCampaigns();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error approving campaign:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function confirmRejectCampaign() {
+            const reason = document.getElementById('reject-reason').value.trim();
+            
+            if (!reason) {
+                showToast('Please enter a rejection reason', 'warning');
+                return;
+            }
+            
+            if (!selectedCampaignId) return;
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+            
+            try {
+                const { data: { user } } = await sb.auth.getUser();
+                if (!user) throw new Error('Admin not authenticated');
+                
+                // Verify admin status
+                const { data: adminCheck } = await sb
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!adminCheck?.is_admin) {
+                    throw new Error('You do not have admin privileges');
+                }
+                
+                const { error } = await sb
+                    .from('campaigns')
+                    .update({
+                        status: 'rejected',
+                        approved_by: user.id,
+                        approved_at: new Date().toISOString(),
+                        rejection_reason: reason
+                    })
+                    .eq('id', selectedCampaignId);
+                
+                if (error) throw error;
+                
+                // Create notification for business
+                await sb
+                    .from('notifications')
+                    .insert({
+                        user_id: allCampaigns.find(c => c.id === selectedCampaignId)?.businesses?.user_id,
+                        title: '❌ Campaign Rejected',
+                        message: `Your campaign has been rejected. Reason: ${reason}`,
+                        type: 'campaign_rejected',
+                        metadata: { rejection_reason: reason }
+                    });
+                
+                showToast('❌ Campaign rejected.', 'success');
+                closeRejectModal();
+                closeReviewModal();
+                loadCampaigns();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error rejecting campaign:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function loadCampaigns() {
+            // Fixed: Removed the broken profiles join - use businesses join only
+            const { data: campaigns, error } = await sb
+                .from('campaigns')
+                .select(`
+                    *,
+                    businesses (
+                        id,
+                        user_id,
+                        business_name,
+                        business_logo
+                    )
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading campaigns:', error);
+                document.getElementById('campaigns-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <p>Error loading campaigns</p>
+                        <p class="text-xs text-gray-600 mt-2">${error.message || 'Please check your connection'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            allCampaigns = campaigns || [];
+            filterAndDisplayCampaigns();
+            updateStats();
+        }
+        
+        function filterAndDisplayCampaigns() {
+            let filtered = [...allCampaigns];
+            
+            // Apply status filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(c => c.status === currentFilter);
+            }
+            
+            // Apply search filter
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(c => 
+                    c.campaign_name.toLowerCase().includes(searchLower) ||
+                    (c.businesses?.business_name && c.businesses.business_name.toLowerCase().includes(searchLower)) ||
+                    (c.campaign_description && c.campaign_description.toLowerCase().includes(searchLower))
+                );
+            }
+            
+            if (filtered.length === 0) {
+                document.getElementById('campaigns-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-12">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p class="text-lg">No campaigns found</p>
+                        <p class="text-sm mt-1">Try adjusting your filters</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const statusMap = {
+                pending: { class: 'status-pending', text: '⏳ Pending' },
+                active: { class: 'status-active', text: '✅ Active' },
+                draft: { class: 'status-draft', text: '💾 Draft' },
+                completed: { class: 'status-completed', text: '📊 Completed' },
+                rejected: { class: 'status-rejected', text: '❌ Rejected' },
+                paused: { class: 'status-paused', text: '⏸️ Paused' }
+            };
+            
+            const html = filtered.map(c => {
+                const status = statusMap[c.status] || statusMap.pending;
+                const spent = c.budget - c.budget_remaining;
+                const spentPercent = c.budget > 0 ? (spent / c.budget) * 100 : 0;
+                const isPending = c.status === 'pending';
+                const imageUrl = c.media_urls && c.media_urls.length > 0 ? c.media_urls[0] : null;
+                
+                return `
+                    <div class="campaign-card p-4 md:p-5 fade-in">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            ${imageUrl ? `
+                                <div class="flex-shrink-0">
+                                    <img src="${imageUrl}" alt="${c.campaign_name}" class="campaign-image w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg">
+                                </div>
+                            ` : `
+                                <div class="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 bg-gray-800 rounded-lg flex items-center justify-center text-3xl">
+                                    🖼️
+                                </div>
+                            `}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <h3 class="font-bold text-white text-base">${c.campaign_name}</h3>
+                                    <span class="status-badge ${status.class}">${status.text}</span>
+                                    ${c.is_smart_campaign ? `<span class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">⚡ Smart</span>` : ''}
+                                </div>
+                                <div class="text-sm text-gray-400">
+                                    ${c.businesses?.business_name || 'Unknown Business'}
+                                </div>
+                                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mt-1">
+                                    <span>💰 UGX ${c.budget.toLocaleString()}</span>
+                                    <span>📊 ${c.total_clicks || 0} clicks</span>
+                                    <span>👁️ ${c.total_views || 0} views</span>
+                                    <span>📅 ${new Date(c.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <div class="progress-bar mt-2">
+                                    <div class="progress-fill" style="width: ${Math.min(spentPercent, 100)}%"></div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    ${spentPercent.toFixed(1)}% spent (UGX ${spent.toLocaleString()})
+                                </div>
+                                ${c.approved_at ? `
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ✅ ${c.status === 'active' ? 'Approved' : 'Reviewed'} on ${new Date(c.approved_at).toLocaleDateString()}
+                                    </div>
+                                ` : ''}
+                                ${c.rejection_reason ? `
+                                    <div class="text-xs text-red-400 mt-2 bg-red-500/10 p-2 rounded-lg">
+                                        ❌ Rejected: ${c.rejection_reason}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="flex flex-wrap gap-2 flex-shrink-0">
+                                ${isPending ? `
+                                    <button onclick='openReviewModal("${c.id}")' 
+                                        class="btn-primary px-4 py-2 rounded-lg text-white text-sm font-medium">
+                                        📋 Review
+                                    </button>
+                                ` : `
+                                    <button onclick='viewCampaignStats("${c.id}")' 
+                                        class="btn-secondary px-3 py-2 rounded-lg text-white text-sm">
+                                        📊 Stats
+                                    </button>
+                                `}
+                                <button onclick='viewBusinessProfile("${c.business_id}")' 
+                                    class="btn-secondary px-3 py-2 rounded-lg text-white text-sm">
+                                    🏢 Business
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('campaigns-list').innerHTML = html;
+        }
+        
+        function updateStats() {
+            const total = allCampaigns.length;
+            const pending = allCampaigns.filter(c => c.status === 'pending').length;
+            const active = allCampaigns.filter(c => c.status === 'active').length;
+            const totalBudget = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
+            
+            document.getElementById('total-campaigns').textContent = total;
+            document.getElementById('pending-campaigns').textContent = pending;
+            document.getElementById('active-campaigns').textContent = active;
+            document.getElementById('total-budget').textContent = `UGX ${totalBudget.toLocaleString()}`;
+        }
+        
+        function filterCampaigns(filter) {
+            currentFilter = filter;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const filterMap = {
+                all: 'filter-all',
+                pending: 'filter-pending',
+                active: 'filter-active',
+                draft: 'filter-draft',
+                completed: 'filter-completed',
+                rejected: 'filter-rejected',
+                paused: 'filter-paused'
+            };
+            
+            document.getElementById(filterMap[filter]).classList.add('active');
+            filterAndDisplayCampaigns();
+        }
+        
+        function viewCampaignStats(campaignId) {
+            window.location.href = `campaign-stats.html?id=${campaignId}`;
+        }
+        
+        function viewBusinessProfile(businessId) {
+            showToast('Viewing business profile: ' + businessId, 'info');
+        }
+        
+        // Search handler
+        document.getElementById('search-campaign').addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            filterAndDisplayCampaigns();
+        });
+        
+        // Auto-refresh
+        function startAutoRefresh() {
+            refreshTimer = 30;
+            document.getElementById('refresh-timer').textContent = '🔄 30s';
+            
+            if (refreshInterval) clearInterval(refreshInterval);
+            
+            refreshInterval = setInterval(() => {
+                refreshTimer--;
+                document.getElementById('refresh-timer').textContent = `🔄 ${refreshTimer}s`;
+                
+                if (refreshTimer <= 0) {
+                    refreshTimer = 30;
+                    loadCampaigns();
+                    document.getElementById('refresh-timer').textContent = '🔄 30s';
+                }
+            }, 1000);
+        }
+        
+        // Real-time subscriptions
+        function subscribeToUpdates() {
+            const subscription = sb
+                .channel('admin-campaigns')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'campaigns'
+                }, () => {
+                    loadCampaigns();
+                    refreshTimer = 30;
+                    document.getElementById('refresh-timer').textContent = '🔄 30s';
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Check admin access
+        async function checkAdminAccess() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            // Check using the new is_admin column
+            if (!profile?.is_admin) {
+                showToast('Access denied. Admin only.', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            // Display admin name
+            document.getElementById('admin-name-display').textContent = profile?.full_name || 'Administrator';
+            
+            await loadCampaigns();
+            subscription = subscribeToUpdates();
+            startAutoRefresh();
+        }
+        
+        // Initialize
+        checkAdminAccess();
+    </script>
+</body>
+</html>

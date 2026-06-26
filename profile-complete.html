@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Complete Your Profile | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .complete-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 2rem;
+            max-width: 520px;
+            width: 100%;
+            max-height: 98vh;
+            overflow-y: auto;
+        }
+        
+        .complete-card::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .complete-card::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .complete-card::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.3);
+            border-radius: 2px;
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .input-field.error {
+            border-color: #ef4444;
+        }
+        
+        .input-field.success {
+            border-color: #10b981;
+        }
+        
+        .input-field:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:active {
+            transform: scale(0.98);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        @media (max-width: 640px) {
+            .complete-card {
+                padding: 1.5rem !important;
+                margin: 0.75rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .step-indicator {
+            transition: all 0.3s ease;
+        }
+        
+        .step-active {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        
+        .step-completed {
+            background: #059669;
+            color: white;
+        }
+        
+        .step-inactive {
+            background: rgba(255, 255, 255, 0.08);
+            color: #6b7280;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .badge-option {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .badge-option:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .badge-option.selected {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.05);
+        }
+        
+        .badge-option:active {
+            transform: scale(0.97);
+        }
+        
+        .commission-badge {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 2rem;
+            padding: 0.25rem 1rem;
+            font-size: 0.7rem;
+            color: #fbbf24;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="complete-card p-6 md:p-8 fade-in">
+        <!-- Logo -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-500 rounded-2xl mb-3">
+                <span class="text-2xl font-black text-white">B</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">Complete Your Profile</h1>
+            <p class="text-gray-400 text-sm">Please provide the missing information to continue</p>
+            <div class="mt-2">
+                <span class="commission-badge">⚡ 10% platform fee applies</span>
+            </div>
+        </div>
+
+        <!-- Step Indicators -->
+        <div class="flex justify-between mb-6">
+            <div class="flex-1 text-center">
+                <div class="step-indicator w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-1 border-2 step-active" id="step1-indicator">
+                    1
+                </div>
+                <span class="text-xs text-gray-400">Personal Info</span>
+            </div>
+            <div class="flex-1 text-center">
+                <div class="step-indicator w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-1 border-2 step-inactive" id="step2-indicator">
+                    2
+                </div>
+                <span class="text-xs text-gray-400">Business Info</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Personal Info -->
+        <div id="step1" class="step-content">
+            <form id="personal-form" class="space-y-4">
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Full Name *</label>
+                    <input type="text" id="full-name" required
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Enter your full name">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Phone Number *</label>
+                    <input type="tel" id="phone" required
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="0771234567">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Bio</label>
+                    <textarea id="bio" rows="3"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Tell us about yourself..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Location</label>
+                    <input type="text" id="location"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="e.g., Kampala, Uganda">
+                </div>
+                
+                <!-- Role Selection -->
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-2">I want to...</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div id="option-advertiser" class="badge-option selected" onclick="toggleRole('advertiser')">
+                            <div class="text-center">
+                                <div class="text-3xl mb-2">📢</div>
+                                <h4 class="text-sm font-bold text-white">Advertise</h4>
+                                <p class="text-xs text-gray-400 mt-1">Post campaigns & reach audiences</p>
+                            </div>
+                        </div>
+                        <div id="option-influencer" class="badge-option selected" onclick="toggleRole('influencer')">
+                            <div class="text-center">
+                                <div class="text-3xl mb-2">👥</div>
+                                <h4 class="text-sm font-bold text-white">Influence</h4>
+                                <p class="text-xs text-gray-400 mt-1">Share links & earn money</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">You can do both! Select all that apply.</p>
+                </div>
+                
+                <button type="submit" class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-base">
+                    Continue →
+                </button>
+            </form>
+        </div>
+
+        <!-- Step 2: Business Info (for advertisers) -->
+        <div id="step2" class="step-content hidden">
+            <form id="business-form" class="space-y-4">
+                <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20 mb-2">
+                    <p class="text-sm text-gray-300">
+                        📢 You selected <span class="text-emerald-400 font-semibold">Advertiser</span>. 
+                        Please provide your business details.
+                    </p>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Business Name *</label>
+                    <input type="text" id="business-name" required
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Enter your business name">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Business Description</label>
+                    <textarea id="business-desc" rows="3"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Tell us about your business..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Website URL</label>
+                    <input type="url" id="website"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="https://yourwebsite.com">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Category</label>
+                    <select id="category"
+                        class="input-field w-full px-4 py-3 rounded-xl text-white text-base">
+                        <option value="">Select Category</option>
+                        <option value="Retail">🛍️ Retail & Shopping</option>
+                        <option value="Technology">💻 Technology</option>
+                        <option value="Food & Beverage">🍔 Food & Beverage</option>
+                        <option value="Services">📞 Services</option>
+                        <option value="Health & Beauty">💅 Health & Beauty</option>
+                        <option value="Education">📚 Education</option>
+                        <option value="Real Estate">🏠 Real Estate</option>
+                        <option value="Entertainment">🎬 Entertainment</option>
+                        <option value="Other">📌 Other</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-base">
+                    Complete Profile →
+                </button>
+            </form>
+            
+            <button type="button" id="back-to-step1" class="btn-secondary w-full mt-3 py-2.5 rounded-xl text-white font-semibold text-sm">
+                ← Back
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-gray-500 text-xs mt-4">
+            <a href="profile.html" class="hover:text-gray-300 transition">Skip for now →</a>
+        </p>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let currentStep = 1;
+        let selectedRoles = {
+            advertiser: true,
+            influencer: true
+        };
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function updateStepUI() {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            
+            document.getElementById(`step${currentStep}`).classList.remove('hidden');
+            
+            for (let i = 1; i <= 2; i++) {
+                const indicator = document.getElementById(`step${i}-indicator`);
+                indicator.classList.remove('step-active', 'step-completed', 'step-inactive');
+                
+                if (i < currentStep) {
+                    indicator.classList.add('step-completed');
+                    indicator.textContent = '✓';
+                } else if (i === currentStep) {
+                    indicator.classList.add('step-active');
+                    indicator.textContent = i;
+                } else {
+                    indicator.classList.add('step-inactive');
+                    indicator.textContent = i;
+                }
+            }
+        }
+        
+        function toggleRole(role) {
+            const element = document.getElementById(`option-${role}`);
+            selectedRoles[role] = !selectedRoles[role];
+            
+            if (selectedRoles[role]) {
+                element.classList.add('selected');
+            } else {
+                element.classList.remove('selected');
+            }
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            // Pre-fill fields if they exist
+            if (profile?.full_name) {
+                document.getElementById('full-name').value = profile.full_name;
+            }
+            if (profile?.phone_number) {
+                document.getElementById('phone').value = profile.phone_number;
+            }
+            if (profile?.bio) {
+                document.getElementById('bio').value = profile.bio;
+            }
+            if (profile?.location) {
+                document.getElementById('location').value = profile.location;
+            }
+            
+            // Set role toggles based on existing profile
+            if (profile?.is_advertiser !== undefined) {
+                selectedRoles.advertiser = profile.is_advertiser !== false;
+                if (!selectedRoles.advertiser) {
+                    document.getElementById('option-advertiser').classList.remove('selected');
+                }
+            }
+            if (profile?.is_influencer !== undefined) {
+                selectedRoles.influencer = profile.is_influencer !== false;
+                if (!selectedRoles.influencer) {
+                    document.getElementById('option-influencer').classList.remove('selected');
+                }
+            }
+        }
+        
+        // Step 1: Personal Info
+        document.getElementById('personal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('full-name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const bio = document.getElementById('bio').value.trim();
+            const location = document.getElementById('location').value.trim();
+            
+            if (!fullName) {
+                showToast('Full name is required', 'warning');
+                document.getElementById('full-name').classList.add('error');
+                setTimeout(() => document.getElementById('full-name').classList.remove('error'), 3000);
+                return;
+            }
+            
+            if (!phone || phone.length < 9) {
+                showToast('Please enter a valid phone number', 'warning');
+                document.getElementById('phone').classList.add('error');
+                setTimeout(() => document.getElementById('phone').classList.remove('error'), 3000);
+                return;
+            }
+            
+            // Update profile
+            const { error } = await sb
+                .from('profiles')
+                .update({
+                    full_name: fullName,
+                    phone_number: phone,
+                    bio: bio,
+                    location: location,
+                    is_advertiser: selectedRoles.advertiser,
+                    is_influencer: selectedRoles.influencer
+                })
+                .eq('id', currentUser.id);
+            
+            if (error) {
+                showToast(error.message, 'error');
+                return;
+            }
+            
+            // If advertiser is selected, show step 2
+            if (selectedRoles.advertiser) {
+                currentStep = 2;
+                updateStepUI();
+            } else {
+                // Influencer only - complete profile and redirect
+                showToast('Profile completed! Redirecting to dashboard...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+            }
+        });
+        
+        // Step 2: Business Info
+        document.getElementById('business-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const businessName = document.getElementById('business-name').value.trim();
+            const description = document.getElementById('business-desc').value.trim();
+            const website = document.getElementById('website').value.trim();
+            const category = document.getElementById('category').value;
+            
+            if (!businessName) {
+                showToast('Business name is required', 'warning');
+                document.getElementById('business-name').classList.add('error');
+                setTimeout(() => document.getElementById('business-name').classList.remove('error'), 3000);
+                return;
+            }
+            
+            // Check if business already exists
+            const { data: existingBusiness } = await sb
+                .from('businesses')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .single();
+            
+            let error;
+            if (existingBusiness) {
+                // Update existing business
+                const result = await sb
+                    .from('businesses')
+                    .update({
+                        business_name: businessName,
+                        business_description: description,
+                        website_url: website || null,
+                        category: category || 'Other'
+                    })
+                    .eq('user_id', currentUser.id);
+                error = result.error;
+            } else {
+                // Create new business
+                const result = await sb
+                    .from('businesses')
+                    .insert({
+                        user_id: currentUser.id,
+                        business_name: businessName,
+                        business_description: description,
+                        website_url: website || null,
+                        category: category || 'Other',
+                        is_verified: false
+                    });
+                error = result.error;
+            }
+            
+            if (error) {
+                showToast(error.message, 'error');
+                return;
+            }
+            
+            showToast('Profile completed! Redirecting to dashboard...', 'success');
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1500);
+        });
+        
+        // Back to step 1
+        document.getElementById('back-to-step1').addEventListener('click', () => {
+            currentStep = 1;
+            updateStepUI();
+        });
+        
+        // Initialize
+        loadUserData();
+        
+        // Check if user is already complete
+        async function checkProfileComplete() {
+            if (currentProfile?.full_name && currentProfile?.phone_number) {
+                const isAdvertiser = currentProfile.is_advertiser !== false;
+                const isInfluencer = currentProfile.is_influencer !== false;
+                
+                if (isAdvertiser) {
+                    const { data: business } = await sb
+                        .from('businesses')
+                        .select('id')
+                        .eq('user_id', currentUser.id)
+                        .single();
+                    
+                    if (business) {
+                        // Profile is complete, redirect to dashboard
+                        window.location.href = 'dashboard.html';
+                        return;
+                    }
+                } else if (isInfluencer) {
+                    // Influencer profile is complete
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+            }
+        }
+        
+        // Check after load
+        setTimeout(checkProfileComplete, 1000);
+    </script>
+</body>
+</html>

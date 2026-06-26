@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Manage Ad Cards | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .campaign-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .campaign-card:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .status-badge {
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-draft { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        .status-completed { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .status-paused { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .filter-btn {
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+        }
+        
+        .filter-btn.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            transition: width 0.5s ease;
+            border-radius: 2px;
+        }
+        
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .ad-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .rating-stars {
+            color: #f59e0b;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        
+        .contact-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.6rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+        
+        @media (max-width: 640px) {
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .campaign-card {
+                padding: 1rem;
+            }
+            .modal-content {
+                margin: 1rem;
+                padding: 1.25rem;
+            }
+            .filter-btn {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.6rem;
+            }
+            .ad-thumb {
+                width: 60px;
+                height: 60px;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Manage Ads</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">My Ad Cards</h1>
+                <p class="text-gray-400 text-sm">Create, manage, and track all your advertising campaigns</p>
+            </div>
+            <button onclick="window.location.href='campaign-create.html'" class="btn-primary px-5 py-2.5 rounded-lg text-white font-semibold text-sm flex items-center gap-2">
+                ➕ New Ad Card
+            </button>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-400 text-xs">Total</div>
+                <div class="text-lg font-bold text-white" id="total-campaigns">0</div>
+            </div>
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-400 text-xs">Active</div>
+                <div class="text-lg font-bold text-emerald-500" id="active-count">0</div>
+            </div>
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-400 text-xs">Drafts</div>
+                <div class="text-lg font-bold text-gray-400" id="draft-count">0</div>
+            </div>
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-400 text-xs">Pending</div>
+                <div class="text-lg font-bold text-yellow-500" id="pending-count">0</div>
+            </div>
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-400 text-xs">Total Spend</div>
+                <div class="text-lg font-bold text-white" id="total-spend">UGX 0</div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-6">
+            <div class="flex-1">
+                <input type="text" id="search-campaign" placeholder="🔍 Search by name, location or description..."
+                    class="search-input w-full px-4 py-2.5 text-white placeholder-gray-500 text-sm">
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+                <button onclick="filterCampaigns('all')" id="filter-all" class="filter-btn active px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">All</button>
+                <button onclick="filterCampaigns('active')" id="filter-active" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">✅ Active</button>
+                <button onclick="filterCampaigns('draft')" id="filter-draft" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">💾 Draft</button>
+                <button onclick="filterCampaigns('pending')" id="filter-pending" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">⏳ Pending</button>
+                <button onclick="filterCampaigns('completed')" id="filter-completed" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">📊 Completed</button>
+                <button onclick="filterCampaigns('rejected')" id="filter-rejected" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">❌ Rejected</button>
+                <button onclick="filterCampaigns('paused')" id="filter-paused" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">⏸️ Paused</button>
+            </div>
+        </div>
+
+        <!-- Campaigns List -->
+        <div id="campaigns-list" class="space-y-4">
+            <div class="text-center text-gray-500 py-20">
+                <div class="loader mx-auto mb-4"></div>
+                <p>Loading your ad cards...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Campaign Modal -->
+    <div id="edit-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-7 max-w-lg w-full max-h-[90vh] overflow-y-auto modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Edit Ad Card</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <form id="edit-form" class="space-y-4">
+                <input type="hidden" id="edit-campaign-id">
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Ad Title</label>
+                    <input type="text" id="edit-name" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Description</label>
+                    <textarea id="edit-description" rows="3" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Phone</label>
+                        <input type="tel" id="edit-phone" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">WhatsApp</label>
+                        <input type="tel" id="edit-whatsapp" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Location</label>
+                    <input type="text" id="edit-location" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Cost Per Click (UGX)</label>
+                        <input type="number" id="edit-cpc" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 text-sm font-medium mb-1.5">Cost Per View (UGX)</label>
+                        <input type="number" id="edit-cpv" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Status</label>
+                    <select id="edit-status" class="input-field w-full px-4 py-3 rounded-xl text-white text-base">
+                        <option value="active">✅ Active</option>
+                        <option value="paused">⏸️ Paused</option>
+                        <option value="completed">📊 Completed</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">You can only modify active, paused, or completed campaigns</p>
+                </div>
+                
+                <div class="flex gap-3 pt-3">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 btn-secondary py-3 rounded-xl text-white font-semibold text-sm">Cancel</button>
+                    <button type="submit" class="flex-1 btn-primary py-3 rounded-xl text-white font-semibold text-sm">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentBusiness = null;
+        let allCampaigns = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+        
+        function openEditModal(id, name, desc, phone, whatsapp, location, cpc, cpv, status) {
+            document.getElementById('edit-campaign-id').value = id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-description').value = desc || '';
+            document.getElementById('edit-phone').value = phone || '';
+            document.getElementById('edit-whatsapp').value = whatsapp || '';
+            document.getElementById('edit-location').value = location || '';
+            document.getElementById('edit-cpc').value = cpc;
+            document.getElementById('edit-cpv').value = cpv;
+            document.getElementById('edit-status').value = status;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: business } = await sb
+                .from('businesses')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            
+            if (!business) {
+                showToast('Business profile not found', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            currentBusiness = business;
+            await loadCampaigns();
+        }
+        
+        async function loadCampaigns() {
+            const { data: campaigns } = await sb
+                .from('campaigns')
+                .select('*')
+                .eq('business_id', currentBusiness.id)
+                .order('created_at', { ascending: false });
+            
+            allCampaigns = campaigns || [];
+            updateStats();
+            filterAndDisplayCampaigns();
+        }
+        
+        function updateStats() {
+            const total = allCampaigns.length;
+            const active = allCampaigns.filter(c => c.status === 'active').length;
+            const drafts = allCampaigns.filter(c => c.status === 'draft').length;
+            const pending = allCampaigns.filter(c => c.status === 'pending').length;
+            const totalSpend = allCampaigns.reduce((sum, c) => sum + (c.budget - c.budget_remaining), 0);
+            
+            document.getElementById('total-campaigns').textContent = total;
+            document.getElementById('active-count').textContent = active;
+            document.getElementById('draft-count').textContent = drafts;
+            document.getElementById('pending-count').textContent = pending;
+            document.getElementById('total-spend').textContent = `UGX ${totalSpend.toLocaleString()}`;
+        }
+        
+        function filterAndDisplayCampaigns() {
+            let filtered = [...allCampaigns];
+            
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(c => c.status === currentFilter);
+            }
+            
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(c => 
+                    c.campaign_name.toLowerCase().includes(searchLower) ||
+                    (c.campaign_description && c.campaign_description.toLowerCase().includes(searchLower)) ||
+                    (c.location && c.location.toLowerCase().includes(searchLower))
+                );
+            }
+            
+            if (filtered.length === 0) {
+                document.getElementById('campaigns-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-20">
+                        <div class="text-6xl mb-4">📭</div>
+                        <p class="text-lg">No ad cards found</p>
+                        <p class="text-sm mt-2">Create your first ad card to get started</p>
+                        <button onclick="window.location.href='campaign-create.html'" class="btn-primary px-6 py-2 rounded-lg text-white font-semibold mt-4">
+                            Create Ad Card →
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const statusColors = {
+                active: 'status-active',
+                draft: 'status-draft',
+                pending: 'status-pending',
+                completed: 'status-completed',
+                rejected: 'status-rejected',
+                paused: 'status-paused'
+            };
+            
+            const statusText = {
+                active: '✅ Active',
+                draft: '💾 Draft',
+                pending: '⏳ Pending Approval',
+                completed: '📊 Completed',
+                rejected: '❌ Rejected',
+                paused: '⏸️ Paused'
+            };
+            
+            const html = filtered.map(campaign => {
+                const spent = campaign.budget - campaign.budget_remaining;
+                const spentPercent = campaign.budget > 0 ? (spent / campaign.budget) * 100 : 0;
+                const isDraft = campaign.status === 'draft';
+                const isPending = campaign.status === 'pending';
+                const canEdit = ['active', 'paused', 'completed', 'draft'].includes(campaign.status);
+                const imageUrl = campaign.media_urls && campaign.media_urls.length > 0 ? campaign.media_urls[0] : null;
+                const rating = campaign.rating || 0;
+                const stars = '⭐'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+                
+                return `
+                    <div class="campaign-card p-4 md:p-5 fade-in">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            ${imageUrl ? `
+                                <div class="flex-shrink-0">
+                                    <img src="${imageUrl}" alt="${campaign.campaign_name}" class="ad-thumb w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg">
+                                </div>
+                            ` : `
+                                <div class="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 bg-gray-800 rounded-lg flex items-center justify-center text-3xl">
+                                    🖼️
+                                </div>
+                            `}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <h3 class="font-bold text-white text-base">${campaign.campaign_name}</h3>
+                                    <span class="status-badge ${statusColors[campaign.status] || 'status-pending'}">${statusText[campaign.status]}</span>
+                                    <span class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">⚡ 10%</span>
+                                </div>
+                                
+                                <p class="text-gray-400 text-sm truncate">${campaign.campaign_description || 'No description'}</p>
+                                
+                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                    <span class="contact-chip">📍 ${campaign.location || 'N/A'}</span>
+                                    ${campaign.phone_number ? `<span class="contact-chip">📞 ${campaign.phone_number}</span>` : ''}
+                                    ${campaign.whatsapp_number ? `<span class="contact-chip">💬 ${campaign.whatsapp_number}</span>` : ''}
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mt-2">
+                                    <span>💰 Budget: UGX ${campaign.budget.toLocaleString()}</span>
+                                    <span>📊 Remaining: UGX ${campaign.budget_remaining.toLocaleString()}</span>
+                                    <span>🖱️ ${campaign.total_clicks || 0} clicks</span>
+                                    <span>👁️ ${campaign.total_views || 0} views</span>
+                                    <span>❤️ ${campaign.likes_count || 0} likes</span>
+                                    <span>📅 ${new Date(campaign.created_at).toLocaleDateString()}</span>
+                                </div>
+                                
+                                ${campaign.rating > 0 ? `
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <span class="rating-stars">${stars}</span>
+                                        <span class="text-xs text-gray-400">(${campaign.total_reviews || 0} reviews)</span>
+                                    </div>
+                                ` : ''}
+                                
+                                ${!isDraft && !isPending ? `
+                                    <div class="progress-bar mt-2">
+                                        <div class="progress-fill" style="width: ${Math.min(spentPercent, 100)}%"></div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">${spentPercent.toFixed(1)}% spent (UGX ${spent.toLocaleString()})</div>
+                                ` : ''}
+                                
+                                ${isDraft ? `
+                                    <div class="text-xs text-gray-500 mt-2">💡 Draft - Complete and submit for review</div>
+                                ` : ''}
+                                ${isPending ? `
+                                    <div class="text-xs text-yellow-500 mt-2">⏳ Awaiting admin approval</div>
+                                ` : ''}
+                                ${campaign.rejection_reason ? `
+                                    <div class="text-xs text-red-400 mt-2 bg-red-500/10 p-2 rounded-lg">
+                                        ❌ ${campaign.rejection_reason}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="flex flex-wrap gap-2 flex-shrink-0">
+                                <button onclick="window.location.href='ad-card.html?id=${campaign.id}'" 
+                                    class="btn-primary px-3 py-1.5 rounded-lg text-white text-sm">
+                                    👁️ View Ad
+                                </button>
+                                <button onclick="window.location.href='campaign-stats.html?id=${campaign.id}'" 
+                                    class="btn-secondary px-3 py-1.5 rounded-lg text-white text-sm">
+                                    📊 Stats
+                                </button>
+                                ${isDraft ? `
+                                    <button onclick="window.location.href='campaign-create.html?edit=${campaign.id}'" 
+                                        class="btn-primary px-3 py-1.5 rounded-lg text-white text-sm">
+                                        ✏️ Edit
+                                    </button>
+                                    <button onclick="submitCampaign('${campaign.id}')" 
+                                        class="btn-warning px-3 py-1.5 rounded-lg text-white text-sm">
+                                        📤 Submit
+                                    </button>
+                                ` : canEdit ? `
+                                    <button onclick='openEditModal("${campaign.id}", "${campaign.campaign_name.replace(/'/g, "\\'")}", "${(campaign.campaign_description || '').replace(/'/g, "\\'")}", "${campaign.phone_number || ''}", "${campaign.whatsapp_number || ''}", "${campaign.location || ''}", ${campaign.cost_per_click}, ${campaign.cost_per_view}, "${campaign.status}")' 
+                                        class="btn-secondary px-3 py-1.5 rounded-lg text-white text-sm">
+                                        ✏️ Edit
+                                    </button>
+                                ` : ''}
+                                ${campaign.status === 'active' ? `
+                                    <button onclick='pauseCampaign("${campaign.id}")' 
+                                        class="btn-warning px-3 py-1.5 rounded-lg text-white text-sm">
+                                        ⏸️ Pause
+                                    </button>
+                                ` : campaign.status === 'paused' ? `
+                                    <button onclick='resumeCampaign("${campaign.id}")' 
+                                        class="btn-primary px-3 py-1.5 rounded-lg text-white text-sm">
+                                        ▶️ Resume
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('campaigns-list').innerHTML = html;
+        }
+        
+        function filterCampaigns(filter) {
+            currentFilter = filter;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const filterMap = {
+                all: 'filter-all',
+                active: 'filter-active',
+                draft: 'filter-draft',
+                pending: 'filter-pending',
+                completed: 'filter-completed',
+                rejected: 'filter-rejected',
+                paused: 'filter-paused'
+            };
+            
+            const activeBtn = document.getElementById(filterMap[filter]);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            filterAndDisplayCampaigns();
+        }
+        
+        async function submitCampaign(campaignId) {
+            const { error } = await sb
+                .from('campaigns')
+                .update({ 
+                    status: 'pending',
+                    is_draft: false
+                })
+                .eq('id', campaignId);
+            
+            if (error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Ad Card submitted for review!', 'success');
+                await loadCampaigns();
+            }
+        }
+        
+        async function pauseCampaign(campaignId) {
+            const { error } = await sb
+                .from('campaigns')
+                .update({ status: 'paused' })
+                .eq('id', campaignId);
+            
+            if (error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Ad Card paused successfully', 'success');
+                await loadCampaigns();
+            }
+        }
+        
+        async function resumeCampaign(campaignId) {
+            const { error } = await sb
+                .from('campaigns')
+                .update({ status: 'active' })
+                .eq('id', campaignId);
+            
+            if (error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Ad Card resumed successfully', 'success');
+                await loadCampaigns();
+            }
+        }
+        
+        // Edit form submission
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const campaignId = document.getElementById('edit-campaign-id').value;
+            const name = document.getElementById('edit-name').value.trim();
+            const description = document.getElementById('edit-description').value.trim();
+            const phone = document.getElementById('edit-phone').value.trim();
+            const whatsapp = document.getElementById('edit-whatsapp').value.trim();
+            const location = document.getElementById('edit-location').value.trim();
+            const cpc = parseFloat(document.getElementById('edit-cpc').value);
+            const cpv = parseFloat(document.getElementById('edit-cpv').value);
+            const status = document.getElementById('edit-status').value;
+            
+            if (!name) {
+                showToast('Ad title is required', 'warning');
+                return;
+            }
+            
+            if (cpc < 10 || cpc > 500) {
+                showToast('Cost per click must be between UGX 10 and 500', 'warning');
+                return;
+            }
+            
+            if (cpv < 5 || cpv > 250) {
+                showToast('Cost per view must be between UGX 5 and 250', 'warning');
+                return;
+            }
+            
+            const { error } = await sb
+                .from('campaigns')
+                .update({
+                    campaign_name: name,
+                    campaign_description: description,
+                    phone_number: phone || null,
+                    whatsapp_number: whatsapp || null,
+                    location: location || null,
+                    cost_per_click: cpc,
+                    cost_per_view: cpv,
+                    status: status
+                })
+                .eq('id', campaignId);
+            
+            if (error) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Ad Card updated successfully', 'success');
+                closeEditModal();
+                await loadCampaigns();
+            }
+        });
+        
+        // Search handler
+        document.getElementById('search-campaign').addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            filterAndDisplayCampaigns();
+        });
+        
+        // Real-time subscriptions
+        function subscribeToUpdates() {
+            if (!currentBusiness) return;
+            
+            const subscription = sb
+                .channel('campaign-manage')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'campaigns',
+                    filter: `business_id=eq.${currentBusiness.id}`
+                }, () => {
+                    loadCampaigns();
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Initialize
+        async function init() {
+            await loadUserData();
+            subscription = subscribeToUpdates();
+        }
+        
+        init();
+    </script>
+</body>
+</html>

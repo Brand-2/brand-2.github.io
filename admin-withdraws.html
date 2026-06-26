@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Admin - Withdrawals | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .withdrawal-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .withdrawal-card:hover {
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .admin-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 640px) {
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .withdrawal-card {
+                padding: 1rem;
+            }
+            .modal-content {
+                margin: 1rem;
+                padding: 1.25rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .filter-btn {
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+        }
+        
+        .filter-btn.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+                    <span class="admin-badge hidden sm:inline">🔑 Admin</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Admin - Withdrawals</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">Withdrawal Requests</h1>
+                <p class="text-gray-400 text-sm">Process influencer withdrawal requests</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="admin-badge">🔑 Admin Access</span>
+                <span class="text-gray-400 text-sm" id="refresh-timer">🔄 30s</span>
+            </div>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Total Requests</div>
+                <div class="text-xl md:text-2xl font-bold text-white" id="total-requests">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Pending</div>
+                <div class="text-xl md:text-2xl font-bold text-yellow-500" id="pending-requests">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Completed</div>
+                <div class="text-xl md:text-2xl font-bold text-emerald-500" id="completed-requests">0</div>
+            </div>
+            <div class="stat-card p-3 md:p-4 text-center">
+                <div class="text-gray-400 text-xs md:text-sm">Total Amount</div>
+                <div class="text-xl md:text-2xl font-bold text-white" id="total-amount">UGX 0</div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-6">
+            <div class="flex-1">
+                <input type="text" id="search-withdrawal" placeholder="🔍 Search by user, phone or reference..."
+                    class="search-input w-full px-4 py-2.5 text-white placeholder-gray-500 text-sm">
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="filterWithdrawals('all')" id="filter-all" class="filter-btn active px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">All</button>
+                <button onclick="filterWithdrawals('pending')" id="filter-pending" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">⏳ Pending</button>
+                <button onclick="filterWithdrawals('completed')" id="filter-completed" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">✅ Completed</button>
+                <button onclick="filterWithdrawals('rejected')" id="filter-rejected" class="filter-btn px-3 py-2 bg-gray-800 text-gray-300 text-sm border border-gray-700">❌ Rejected</button>
+            </div>
+        </div>
+
+        <!-- Withdrawals List -->
+        <div id="withdrawals-list" class="space-y-4">
+            <div class="text-center text-gray-500 py-20">
+                <div class="loader mx-auto mb-4"></div>
+                <p>Loading withdrawal requests...</p>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-20 hidden">
+            <div class="text-6xl mb-4">📭</div>
+            <h3 class="text-xl font-bold text-white mb-2">No Withdrawal Requests</h3>
+            <p class="text-gray-400">All withdrawal requests have been processed</p>
+        </div>
+    </div>
+
+    <!-- Process Withdrawal Modal -->
+    <div id="process-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-8 max-w-md w-full modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Process Withdrawal</h3>
+                <button onclick="closeProcessModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <div id="modal-details" class="space-y-3 mb-6">
+                <div class="bg-black/30 rounded-xl p-4">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-400 text-sm">User:</span>
+                        <span class="text-white font-medium" id="modal-user">-</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-400 text-sm">Amount:</span>
+                        <span class="text-emerald-500 font-bold text-lg" id="modal-amount">-</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-400 text-sm">Phone:</span>
+                        <span class="text-white" id="modal-phone">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400 text-sm">Provider:</span>
+                        <span class="text-white" id="modal-provider">-</span>
+                    </div>
+                    ${currentProfile?.is_admin ? `
+                        <div class="flex justify-between mt-2 pt-2 border-t border-gray-700">
+                            <span class="text-gray-400 text-sm">Admin:</span>
+                            <span class="text-emerald-400 font-medium">${currentProfile?.full_name || 'You'} 🔑</span>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="text-xs text-gray-500">
+                    <p>📅 Requested: <span id="modal-date">-</span></p>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Action</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button onclick="confirmComplete()" class="flex-1 btn-success py-3 rounded-xl text-white font-semibold text-base">
+                        ✅ Complete & Send Money
+                    </button>
+                    <button onclick="showRejectReason()" class="flex-1 btn-danger py-3 rounded-xl text-white font-semibold text-base">
+                        ❌ Reject
+                    </button>
+                </div>
+            </div>
+            
+            <button onclick="closeProcessModal()" class="w-full py-2.5 rounded-xl bg-gray-800 text-white text-sm">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Reject Reason Modal -->
+    <div id="reject-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-8 max-w-md w-full modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Reject Withdrawal</h3>
+                <button onclick="closeRejectModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Rejection Reason *</label>
+                <textarea id="reject-reason" rows="4" 
+                    class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 text-base"
+                    placeholder="Why is this withdrawal being rejected?"></textarea>
+                <p class="text-xs text-gray-500 mt-1">This reason will be shown to the user</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="confirmReject()" class="flex-1 btn-danger py-3 rounded-xl text-white font-semibold text-base">
+                    Confirm Reject
+                </button>
+                <button onclick="closeRejectModal()" class="flex-1 btn-secondary py-3 rounded-xl text-white font-semibold text-base">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let allWithdrawals = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let selectedWithdrawalId = null;
+        let refreshTimer = 30;
+        let refreshInterval = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard-admin.html';
+        }
+        
+        function openProcessModal(withdrawalId) {
+            selectedWithdrawalId = withdrawalId;
+            const withdrawal = allWithdrawals.find(w => w.id === withdrawalId);
+            
+            if (!withdrawal) return;
+            
+            document.getElementById('modal-user').textContent = withdrawal.profiles?.full_name || withdrawal.profiles?.email || 'Unknown';
+            document.getElementById('modal-amount').textContent = `UGX ${withdrawal.amount.toLocaleString()}`;
+            document.getElementById('modal-phone').textContent = withdrawal.phone_number;
+            document.getElementById('modal-provider').textContent = withdrawal.provider || 'MTN';
+            document.getElementById('modal-date').textContent = new Date(withdrawal.created_at).toLocaleString();
+            
+            document.getElementById('process-modal').classList.remove('hidden');
+        }
+        
+        function closeProcessModal() {
+            document.getElementById('process-modal').classList.add('hidden');
+            selectedWithdrawalId = null;
+        }
+        
+        function showRejectReason() {
+            closeProcessModal();
+            document.getElementById('reject-modal').classList.remove('hidden');
+        }
+        
+        function closeRejectModal() {
+            document.getElementById('reject-modal').classList.add('hidden');
+            document.getElementById('reject-reason').value = '';
+        }
+        
+        async function confirmComplete() {
+            if (!selectedWithdrawalId) return;
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+            
+            try {
+                // Get admin user
+                const { data: { user } } = await sb.auth.getUser();
+                if (!user) throw new Error('Admin not authenticated');
+                
+                // Verify admin status
+                const { data: adminCheck } = await sb
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!adminCheck?.is_admin) {
+                    throw new Error('You do not have admin privileges');
+                }
+                
+                // Get the withdrawal details
+                const { data: withdrawal } = await sb
+                    .from('withdrawal_requests')
+                    .select('*')
+                    .eq('id', selectedWithdrawalId)
+                    .single();
+                
+                if (!withdrawal) throw new Error('Withdrawal not found');
+                
+                // Update withdrawal request
+                const { error: updateError } = await sb
+                    .from('withdrawal_requests')
+                    .update({
+                        status: 'completed',
+                        processed_by: user.id,
+                        processed_at: new Date().toISOString()
+                    })
+                    .eq('id', selectedWithdrawalId);
+                
+                if (updateError) throw updateError;
+                
+                // Create transaction record for the payout
+                const { error: txError } = await sb
+                    .from('transactions')
+                    .insert({
+                        user_id: withdrawal.user_id,
+                        amount: withdrawal.amount,
+                        fee: 0,
+                        net_amount: withdrawal.amount,
+                        currency: 'UGX',
+                        transaction_type: 'withdrawal',
+                        status: 'completed',
+                        reference: `WTH-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                        phone_number: withdrawal.phone_number,
+                        payment_method: withdrawal.provider || 'MTN',
+                        description: `Withdrawal processed by admin ${currentProfile?.full_name || user.email}`,
+                        completed_at: new Date().toISOString()
+                    });
+                
+                if (txError) {
+                    console.error('Transaction error:', txError);
+                    // Don't throw, just log - the withdrawal is already marked completed
+                }
+                
+                // Update user's wallet balance (deduct the amount)
+                const { data: userProfile } = await sb
+                    .from('profiles')
+                    .select('wallet_balance')
+                    .eq('id', withdrawal.user_id)
+                    .single();
+                
+                if (userProfile) {
+                    await sb
+                        .from('profiles')
+                        .update({
+                            wallet_balance: Math.max(0, (userProfile.wallet_balance || 0) - withdrawal.amount)
+                        })
+                        .eq('id', withdrawal.user_id);
+                }
+                
+                // Create notification for user
+                await sb
+                    .from('notifications')
+                    .insert({
+                        user_id: withdrawal.user_id,
+                        title: '✅ Withdrawal Completed!',
+                        message: `Your withdrawal of UGX ${withdrawal.amount.toLocaleString()} has been processed and sent to ${withdrawal.phone_number}.`,
+                        type: 'withdrawal_completed'
+                    });
+                
+                showToast('✅ Withdrawal marked as completed! Funds sent to user.', 'success');
+                closeProcessModal();
+                loadWithdrawals();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error processing withdrawal:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function confirmReject() {
+            const reason = document.getElementById('reject-reason').value.trim();
+            
+            if (!reason) {
+                showToast('Please enter a rejection reason', 'warning');
+                return;
+            }
+            
+            if (!selectedWithdrawalId) return;
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+            
+            try {
+                const { data: { user } } = await sb.auth.getUser();
+                if (!user) throw new Error('Admin not authenticated');
+                
+                // Verify admin status
+                const { data: adminCheck } = await sb
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (!adminCheck?.is_admin) {
+                    throw new Error('You do not have admin privileges');
+                }
+                
+                // Get the withdrawal details
+                const { data: withdrawal } = await sb
+                    .from('withdrawal_requests')
+                    .select('*')
+                    .eq('id', selectedWithdrawalId)
+                    .single();
+                
+                if (!withdrawal) throw new Error('Withdrawal not found');
+                
+                // Update withdrawal request
+                const { error: updateError } = await sb
+                    .from('withdrawal_requests')
+                    .update({
+                        status: 'rejected',
+                        processed_by: user.id,
+                        processed_at: new Date().toISOString(),
+                        rejection_reason: reason
+                    })
+                    .eq('id', selectedWithdrawalId);
+                
+                if (updateError) throw updateError;
+                
+                // Create notification for user
+                await sb
+                    .from('notifications')
+                    .insert({
+                        user_id: withdrawal.user_id,
+                        title: '❌ Withdrawal Rejected',
+                        message: `Your withdrawal request of UGX ${withdrawal.amount.toLocaleString()} was rejected. Reason: ${reason}`,
+                        type: 'withdrawal_rejected',
+                        metadata: { rejection_reason: reason }
+                    });
+                
+                showToast('❌ Withdrawal rejected.', 'success');
+                closeRejectModal();
+                closeProcessModal();
+                loadWithdrawals();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error rejecting withdrawal:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function loadWithdrawals() {
+            const { data: withdrawals, error } = await sb
+                .from('withdrawal_requests')
+                .select(`
+                    *,
+                    profiles!withdrawal_requests_user_id_fkey (
+                        id,
+                        full_name,
+                        email,
+                        phone_number,
+                        wallet_balance,
+                        is_admin
+                    ),
+                    processed_by_profile:profiles!withdrawal_requests_processed_by_fkey (
+                        id,
+                        full_name,
+                        email,
+                        is_admin
+                    )
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading withdrawals:', error);
+                document.getElementById('withdrawals-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <p>Error loading withdrawals</p>
+                        <p class="text-xs text-gray-600 mt-2">${error.message || 'Please check your connection'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            allWithdrawals = withdrawals || [];
+            filterAndDisplayWithdrawals();
+            updateStats();
+        }
+        
+        function filterAndDisplayWithdrawals() {
+            let filtered = [...allWithdrawals];
+            
+            // Apply status filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(w => w.status === currentFilter);
+            }
+            
+            // Apply search filter
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(w => 
+                    (w.profiles?.full_name && w.profiles.full_name.toLowerCase().includes(searchLower)) ||
+                    (w.profiles?.email && w.profiles.email.toLowerCase().includes(searchLower)) ||
+                    (w.phone_number && w.phone_number.includes(searchLower)) ||
+                    (w.reference && w.reference.toLowerCase().includes(searchLower))
+                );
+            }
+            
+            if (filtered.length === 0) {
+                document.getElementById('withdrawals-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-12">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p class="text-lg">No withdrawal requests found</p>
+                        <p class="text-sm mt-1">Try adjusting your filters</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const statusMap = {
+                pending: { class: 'status-pending', text: '⏳ Pending', icon: '🕐' },
+                completed: { class: 'status-completed', text: '✅ Completed', icon: '✅' },
+                rejected: { class: 'status-rejected', text: '❌ Rejected', icon: '❌' }
+            };
+            
+            const html = filtered.map(w => {
+                const status = statusMap[w.status] || statusMap.pending;
+                const canProcess = w.status === 'pending';
+                const isUserAdmin = w.profiles?.is_admin ? '🔑' : '';
+                const processedBy = w.processed_by_profile?.full_name || w.processed_by_profile?.email || 'System';
+                const isProcessorAdmin = w.processed_by_profile?.is_admin ? '🔑' : '';
+                
+                return `
+                    <div class="withdrawal-card p-4 md:p-5 fade-in">
+                        <div class="flex flex-col md:flex-row justify-between md:items-start gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <span class="font-bold text-white text-base">UGX ${w.amount.toLocaleString()}</span>
+                                    <span class="status-badge ${status.class}">${status.text}</span>
+                                    ${isUserAdmin ? '<span class="admin-badge">🔑 Admin</span>' : ''}
+                                </div>
+                                <div class="text-sm text-gray-300 mt-1">
+                                    ${w.profiles?.full_name || w.profiles?.email || 'Unknown User'}
+                                </div>
+                                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mt-1">
+                                    <span>📱 ${w.phone_number}</span>
+                                    <span>📱 ${w.provider || 'MTN'}</span>
+                                    <span>📅 ${new Date(w.created_at).toLocaleString()}</span>
+                                </div>
+                                ${w.rejection_reason ? `
+                                    <div class="text-xs text-red-400 mt-2 bg-red-500/10 p-2 rounded-lg">
+                                        ❌ Reason: ${w.rejection_reason}
+                                    </div>
+                                ` : ''}
+                                ${w.processed_at ? `
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ${w.status === 'completed' ? '✅ Processed' : '❌ Reviewed'} by ${processedBy} ${isProcessorAdmin} on ${new Date(w.processed_at).toLocaleString()}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                ${canProcess ? `
+                                    <button onclick='openProcessModal("${w.id}")' 
+                                        class="btn-success px-4 py-2 rounded-lg text-white text-sm font-medium">
+                                        ✅ Process
+                                    </button>
+                                ` : ''}
+                                <button onclick="viewUserDetails('${w.user_id}')" 
+                                    class="btn-secondary px-3 py-2 rounded-lg text-white text-sm">
+                                    👤 User
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('withdrawals-list').innerHTML = html;
+        }
+        
+        function updateStats() {
+            const total = allWithdrawals.length;
+            const pending = allWithdrawals.filter(w => w.status === 'pending').length;
+            const completed = allWithdrawals.filter(w => w.status === 'completed').length;
+            const totalAmount = allWithdrawals
+                .filter(w => w.status === 'completed')
+                .reduce((sum, w) => sum + w.amount, 0);
+            
+            document.getElementById('total-requests').textContent = total;
+            document.getElementById('pending-requests').textContent = pending;
+            document.getElementById('completed-requests').textContent = completed;
+            document.getElementById('total-amount').textContent = `UGX ${totalAmount.toLocaleString()}`;
+        }
+        
+        function filterWithdrawals(filter) {
+            currentFilter = filter;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const filterMap = {
+                all: 'filter-all',
+                pending: 'filter-pending',
+                completed: 'filter-completed',
+                rejected: 'filter-rejected'
+            };
+            
+            document.getElementById(filterMap[filter]).classList.add('active');
+            filterAndDisplayWithdrawals();
+        }
+        
+        function viewUserDetails(userId) {
+            showToast('User ID: ' + userId, 'info');
+        }
+        
+        // Search handler
+        document.getElementById('search-withdrawal').addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            filterAndDisplayWithdrawals();
+        });
+        
+        // Auto-refresh
+        function startAutoRefresh() {
+            refreshTimer = 30;
+            document.getElementById('refresh-timer').textContent = '🔄 30s';
+            
+            if (refreshInterval) clearInterval(refreshInterval);
+            
+            refreshInterval = setInterval(() => {
+                refreshTimer--;
+                document.getElementById('refresh-timer').textContent = `🔄 ${refreshTimer}s`;
+                
+                if (refreshTimer <= 0) {
+                    refreshTimer = 30;
+                    loadWithdrawals();
+                    document.getElementById('refresh-timer').textContent = '🔄 30s';
+                }
+            }, 1000);
+        }
+        
+        // Real-time subscriptions
+        function subscribeToUpdates() {
+            const subscription = sb
+                .channel('admin-withdrawals')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'withdrawal_requests'
+                }, () => {
+                    loadWithdrawals();
+                    refreshTimer = 30;
+                    document.getElementById('refresh-timer').textContent = '🔄 30s';
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Check admin access
+        async function checkAdminAccess() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            // Check using the new is_admin column
+            if (!profile?.is_admin) {
+                showToast('Access denied. Admin only.', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            await loadWithdrawals();
+            subscription = subscribeToUpdates();
+            startAutoRefresh();
+        }
+        
+        // Initialize
+        checkAdminAccess();
+    </script>
+</body>
+</html>

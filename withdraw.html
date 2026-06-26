@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Withdraw Funds | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .withdraw-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 1.5rem;
+        }
+        
+        .balance-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 1.5rem;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-danger:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #ef4444;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+        
+        .input-field:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .request-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .request-item:hover {
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .status-badge {
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        @media (max-width: 640px) {
+            .withdraw-card {
+                padding: 1.25rem;
+            }
+            .balance-card {
+                padding: 1.25rem;
+            }
+            .balance-amount {
+                font-size: 2.5rem;
+            }
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .quick-amount-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
+            }
+            .quick-amount-btn {
+                padding: 0.5rem;
+                font-size: 0.7rem;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .quick-amount-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .quick-amount-btn {
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #d1d5db;
+            font-weight: 500;
+            padding: 0.6rem;
+            font-size: 0.8rem;
+        }
+        
+        .quick-amount-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .quick-amount-btn.active {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #f87171;
+        }
+        
+        .info-icon {
+            cursor: help;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .select-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+        }
+        
+        .select-input:focus {
+            outline: none;
+            border-color: #ef4444;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .commission-note {
+            background: rgba(245, 158, 11, 0.05);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Withdraw</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 pb-8 pt-4 md:px-6 md:pt-6">
+        <!-- Balance Card -->
+        <div class="balance-card p-5 md:p-6 mb-6 fade-in">
+            <div class="text-center">
+                <p class="text-gray-400 text-sm mb-1">Available Balance</p>
+                <div class="balance-amount text-4xl md:text-5xl font-black text-emerald-500 mb-2" id="available-balance">UGX 0</div>
+                <div class="flex flex-wrap items-center justify-center gap-2 text-xs">
+                    <span class="text-gray-500">Minimum withdrawal: <span class="text-white font-medium">UGX 5,000</span></span>
+                    <span class="text-gray-600 hidden sm:inline">|</span>
+                    <span class="text-gray-500 flex items-center gap-1">
+                        <span class="info-icon" title="You can only withdraw amounts equal to or greater than UGX 5,000">ⓘ</span>
+                        <span>No withdrawal fees</span>
+                    </span>
+                </div>
+                <div class="mt-2 commission-note">
+                    <span class="text-xs text-yellow-500">⚡ 10% platform fee already deducted from your influence earnings</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-3 gap-2 md:gap-3 mb-6">
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-500 text-xs md:text-sm">Balance</div>
+                <div class="text-sm md:text-base font-bold text-white" id="stat-balance">UGX 0</div>
+            </div>
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-500 text-xs md:text-sm">Pending</div>
+                <div class="text-sm md:text-base font-bold text-yellow-500" id="stat-pending">0</div>
+            </div>
+            <div class="stat-card p-3 text-center">
+                <div class="text-gray-500 text-xs md:text-sm">Withdrawn</div>
+                <div class="text-sm md:text-base font-bold text-emerald-500" id="stat-withdrawn">UGX 0</div>
+            </div>
+        </div>
+
+        <!-- Withdrawal Form Card -->
+        <div class="withdraw-card p-5 md:p-7 mb-6 fade-in">
+            <h2 class="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span>🏦</span>
+                <span>Request Withdrawal</span>
+            </h2>
+            
+            <form id="withdraw-form" class="space-y-4">
+                <!-- Quick Amount Selector -->
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-2">Select Amount (UGX)</label>
+                    <div class="quick-amount-grid grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        <button type="button" onclick="setQuickAmount(5000)" class="quick-amount-btn">5,000</button>
+                        <button type="button" onclick="setQuickAmount(10000)" class="quick-amount-btn">10,000</button>
+                        <button type="button" onclick="setQuickAmount(20000)" class="quick-amount-btn">20,000</button>
+                        <button type="button" onclick="setQuickAmount(50000)" class="quick-amount-btn">50,000</button>
+                        <button type="button" onclick="setQuickAmount(100000)" class="quick-amount-btn">100,000</button>
+                        <button type="button" onclick="setMaxAmount()" class="quick-amount-btn col-span-1 sm:col-span-1 text-red-400 border-red-500/30 bg-red-500/5">
+                            Max
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Custom Amount Input -->
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-2">Or Enter Custom Amount</label>
+                    <input type="number" id="withdraw-amount" required min="5000"
+                        class="input-field w-full px-4 py-3.5 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="Enter amount (min. 5,000)">
+                    <p class="text-xs text-gray-500 mt-1.5" id="amount-hint">Minimum withdrawal: UGX 5,000</p>
+                </div>
+                
+                <!-- Phone Number -->
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-2">Mobile Money Number *</label>
+                    <input type="tel" id="withdraw-phone" required
+                        class="input-field w-full px-4 py-3.5 rounded-xl text-white placeholder-gray-500 text-base"
+                        placeholder="0771234567">
+                    <p class="text-xs text-gray-500 mt-1.5">Enter the mobile money number where you want to receive funds</p>
+                </div>
+                
+                <!-- Provider Selection -->
+                <div>
+                    <label class="block text-gray-300 text-sm font-medium mb-2">Select Provider</label>
+                    <select id="withdraw-provider" class="select-input w-full px-4 py-3.5 rounded-xl text-white text-base">
+                        <option value="MTN">📱 MTN Mobile Money</option>
+                        <option value="Airtel">📱 Airtel Money</option>
+                    </select>
+                </div>
+                
+                <!-- Withdrawal Summary -->
+                <div class="bg-red-500/10 rounded-xl p-4 border border-red-500/20">
+                    <h3 class="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>Withdrawal Summary</span>
+                    </h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Withdrawal Amount:</span>
+                            <span class="text-white font-bold" id="summary-amount">UGX 0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Processing Fee:</span>
+                            <span class="text-emerald-400">FREE</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-red-500/20">
+                            <span class="text-gray-400">You'll Receive:</span>
+                            <span class="text-emerald-400 font-bold text-lg" id="summary-receive">UGX 0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Important Notes -->
+                <div class="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20">
+                    <div class="flex items-start space-x-2">
+                        <span class="text-yellow-500 text-lg flex-shrink-0">⚠️</span>
+                        <div class="text-xs text-gray-300 space-y-1">
+                            <p class="font-semibold text-yellow-500">Important Notes:</p>
+                            <ul class="list-disc list-inside space-y-1 text-gray-400">
+                                <li>Minimum withdrawal is <span class="text-white font-medium">UGX 5,000</span></li>
+                                <li>Withdrawals processed within <span class="text-white font-medium">24-48 hours</span></li>
+                                <li>Ensure your mobile money number is <span class="text-white font-medium">correct</span></li>
+                                <li>You'll receive a confirmation SMS once processed</li>
+                                <li>10% platform fee already deducted from earnings</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" id="submit-withdraw" class="btn-danger w-full py-3.5 rounded-xl text-white font-semibold text-base transition">
+                    Request Withdrawal →
+                </button>
+            </form>
+        </div>
+        
+        <!-- Recent Withdrawal Requests -->
+        <div class="bg-gray-900/50 rounded-2xl p-5 md:p-7 border border-gray-800 fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>📜</span>
+                    <span>Recent Withdrawal Requests</span>
+                </h3>
+                <span class="text-xs text-gray-500">Last 10</span>
+            </div>
+            <div id="withdrawal-requests" class="space-y-3 max-h-96 overflow-y-auto">
+                <div class="text-center text-gray-500 py-8">
+                    <div class="loader"></div>
+                    <p class="mt-2 text-sm">Loading requests...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FAQ Section -->
+        <div class="mt-6 bg-gray-900/50 rounded-2xl p-5 md:p-7 border border-gray-800 fade-in">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span>❓</span>
+                <span>Frequently Asked Questions</span>
+            </h3>
+            <div class="space-y-3">
+                <div class="border-b border-gray-800 pb-3">
+                    <button onclick="toggleFAQ(1)" class="flex justify-between items-center w-full text-left">
+                        <span class="font-medium text-gray-300 text-sm">How long do withdrawals take?</span>
+                        <span id="faq-icon-1" class="text-emerald-500 text-sm">▼</span>
+                    </button>
+                    <div id="faq-1" class="hidden mt-2 text-sm text-gray-400">
+                        Withdrawals are processed within 24-48 hours after approval. You'll receive an SMS confirmation once the money is sent to your mobile money account.
+                    </div>
+                </div>
+                <div class="border-b border-gray-800 pb-3">
+                    <button onclick="toggleFAQ(2)" class="flex justify-between items-center w-full text-left">
+                        <span class="font-medium text-gray-300 text-sm">Is there a withdrawal fee?</span>
+                        <span id="faq-icon-2" class="text-emerald-500 text-sm">▼</span>
+                    </button>
+                    <div id="faq-2" class="hidden mt-2 text-sm text-gray-400">
+                        No, Brand 2 does not charge any withdrawal fees. You receive the full amount you request.
+                    </div>
+                </div>
+                <div class="border-b border-gray-800 pb-3">
+                    <button onclick="toggleFAQ(3)" class="flex justify-between items-center w-full text-left">
+                        <span class="font-medium text-gray-300 text-sm">What if I enter the wrong number?</span>
+                        <span id="faq-icon-3" class="text-emerald-500 text-sm">▼</span>
+                    </button>
+                    <div id="faq-3" class="hidden mt-2 text-sm text-gray-400">
+                        Please double-check your number before submitting. If you made an error, contact support immediately. We are not responsible for funds sent to incorrect numbers.
+                    </div>
+                </div>
+                <div>
+                    <button onclick="toggleFAQ(4)" class="flex justify-between items-center w-full text-left">
+                        <span class="font-medium text-gray-300 text-sm">Why was my withdrawal rejected?</span>
+                        <span id="faq-icon-4" class="text-emerald-500 text-sm">▼</span>
+                    </button>
+                    <div id="faq-4" class="hidden mt-2 text-sm text-gray-400">
+                        Common reasons: insufficient balance, incorrect mobile money number, or suspicious account activity. Check the rejection reason in your request history.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let currentBalance = 0;
+        let selectedAmount = 0;
+        const MIN_WITHDRAWAL = 5000;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function toggleFAQ(id) {
+            const content = document.getElementById(`faq-${id}`);
+            const icon = document.getElementById(`faq-icon-${id}`);
+            content.classList.toggle('hidden');
+            icon.textContent = content.classList.contains('hidden') ? '▼' : '▲';
+        }
+        
+        function setQuickAmount(amount) {
+            if (amount > currentBalance) {
+                showToast(`Insufficient balance. Maximum withdrawal is UGX ${currentBalance.toLocaleString()}`, 'warning');
+                document.getElementById('withdraw-amount').value = currentBalance;
+                updateSummary();
+                return;
+            }
+            document.getElementById('withdraw-amount').value = amount;
+            
+            document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-red-500/30', 'bg-red-500/5');
+            });
+            if (event?.target) {
+                event.target.classList.add('active', 'border-red-500/30', 'bg-red-500/5');
+            }
+            
+            updateSummary();
+        }
+        
+        function setMaxAmount() {
+            document.getElementById('withdraw-amount').value = currentBalance;
+            updateSummary();
+            
+            document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-red-500/30', 'bg-red-500/5');
+            });
+        }
+        
+        function updateSummary() {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value) || 0;
+            selectedAmount = amount;
+            
+            document.getElementById('summary-amount').textContent = `UGX ${amount.toLocaleString()}`;
+            document.getElementById('summary-receive').textContent = `UGX ${amount.toLocaleString()}`;
+            
+            const hint = document.getElementById('amount-hint');
+            if (amount < MIN_WITHDRAWAL && amount > 0) {
+                hint.textContent = `⚠️ Minimum withdrawal is UGX ${MIN_WITHDRAWAL.toLocaleString()}`;
+                hint.classList.add('text-red-400');
+                hint.classList.remove('text-gray-500');
+            } else if (amount > currentBalance) {
+                hint.textContent = `⚠️ Amount exceeds available balance (UGX ${currentBalance.toLocaleString()})`;
+                hint.classList.add('text-red-400');
+                hint.classList.remove('text-gray-500');
+            } else {
+                hint.textContent = `Minimum withdrawal: UGX ${MIN_WITHDRAWAL.toLocaleString()}`;
+                hint.classList.remove('text-red-400');
+                hint.classList.add('text-gray-500');
+            }
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            currentBalance = profile?.wallet_balance || 0;
+            
+            document.getElementById('available-balance').textContent = `UGX ${currentBalance.toLocaleString()}`;
+            document.getElementById('stat-balance').textContent = `UGX ${currentBalance.toLocaleString()}`;
+            
+            document.getElementById('withdraw-amount').max = currentBalance;
+            
+            await loadWithdrawalRequests();
+        }
+        
+        async function loadWithdrawalRequests() {
+            if (!currentUser) return;
+            
+            const { data: requests, error } = await sb
+                .from('withdrawal_requests')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false })
+                .limit(10);
+            
+            if (error) {
+                console.error('Error loading withdrawals:', error);
+                document.getElementById('withdrawal-requests').innerHTML = `
+                    <div class="text-center text-gray-500 py-6">
+                        <p class="text-sm">Error loading requests</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const pending = requests?.filter(r => r.status === 'pending').length || 0;
+            const withdrawn = requests?.filter(r => r.status === 'completed')
+                .reduce((sum, r) => sum + r.amount, 0) || 0;
+            
+            document.getElementById('stat-pending').textContent = pending;
+            document.getElementById('stat-withdrawn').textContent = `UGX ${withdrawn.toLocaleString()}`;
+            
+            if (!requests || requests.length === 0) {
+                document.getElementById('withdrawal-requests').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p class="text-sm">No withdrawal requests yet</p>
+                        <p class="text-xs mt-1">Your withdrawal history will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const statusMap = {
+                pending: { class: 'status-pending', text: '⏳ Pending' },
+                completed: { class: 'status-completed', text: '✅ Completed' },
+                rejected: { class: 'status-rejected', text: '❌ Rejected' }
+            };
+            
+            const html = requests.map(req => {
+                const status = statusMap[req.status] || statusMap.pending;
+                
+                return `
+                    <div class="request-item p-4 fade-in">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
+                            <div>
+                                <div class="font-bold text-white text-base">UGX ${req.amount.toLocaleString()}</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    ${new Date(req.created_at).toLocaleString()}
+                                </div>
+                                <div class="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
+                                    <span>${req.provider || 'MTN'}</span>
+                                    <span class="text-gray-700">•</span>
+                                    <span>${req.phone_number}</span>
+                                </div>
+                            </div>
+                            <div class="text-left sm:text-right">
+                                <span class="status-badge ${status.class}">${status.text}</span>
+                                ${req.rejection_reason ? `
+                                    <div class="text-xs text-red-400 mt-2 max-w-[200px] break-words">
+                                        Reason: ${req.rejection_reason}
+                                    </div>
+                                ` : ''}
+                                ${req.processed_at ? `
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ${req.status === 'completed' ? 'Processed' : 'Reviewed'}: ${new Date(req.processed_at).toLocaleDateString()}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('withdrawal-requests').innerHTML = html;
+        }
+        
+        // Withdraw form submission
+        document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            const phone = document.getElementById('withdraw-phone').value;
+            const provider = document.getElementById('withdraw-provider').value;
+            
+            if (!amount || isNaN(amount)) {
+                showToast('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            if (amount < MIN_WITHDRAWAL) {
+                showToast(`Minimum withdrawal is UGX ${MIN_WITHDRAWAL.toLocaleString()}`, 'error');
+                return;
+            }
+            
+            if (amount > currentBalance) {
+                showToast(`Insufficient balance. Maximum withdrawal is UGX ${currentBalance.toLocaleString()}`, 'error');
+                return;
+            }
+            
+            if (!phone || phone.length < 9) {
+                showToast('Please enter a valid mobile money number', 'error');
+                return;
+            }
+            
+            const phoneRegex = /^[0-9]{9,12}$/;
+            if (!phoneRegex.test(phone.replace(/[^0-9]/g, ''))) {
+                showToast('Please enter a valid phone number (only digits)', 'error');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submit-withdraw');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+            
+            try {
+                const { data: profile } = await sb
+                    .from('profiles')
+                    .select('wallet_balance')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (amount > (profile?.wallet_balance || 0)) {
+                    throw new Error('Insufficient balance. Please refresh and try again.');
+                }
+                
+                const { error: requestError } = await sb
+                    .from('withdrawal_requests')
+                    .insert({
+                        user_id: currentUser.id,
+                        amount: amount,
+                        phone_number: phone,
+                        provider: provider,
+                        status: 'pending'
+                    });
+                
+                if (requestError) throw requestError;
+                
+                const reference = `WTH-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                
+                const { error: txError } = await sb
+                    .from('transactions')
+                    .insert({
+                        user_id: currentUser.id,
+                        amount: amount,
+                        fee: 0,
+                        net_amount: amount,
+                        currency: 'UGX',
+                        transaction_type: 'withdrawal',
+                        status: 'pending',
+                        reference: reference,
+                        phone_number: phone,
+                        payment_method: provider,
+                        description: `Withdrawal request to ${provider} ${phone}`
+                    });
+                
+                if (txError) throw txError;
+                
+                showToast('Withdrawal request submitted successfully! Admin will process within 24-48 hours.', 'success');
+                
+                document.getElementById('withdraw-form').reset();
+                document.getElementById('withdraw-amount').value = '';
+                document.getElementById('summary-amount').textContent = 'UGX 0';
+                document.getElementById('summary-receive').textContent = 'UGX 0';
+                
+                document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+                    btn.classList.remove('active', 'border-red-500/30', 'bg-red-500/5');
+                });
+                
+                await loadUserData();
+                
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Withdrawal error:', error);
+                showToast(error.message || 'Failed to submit withdrawal request. Please try again.', 'error');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        document.getElementById('withdraw-amount').addEventListener('input', updateSummary);
+        
+        function subscribeToUpdates() {
+            if (!currentUser) return;
+            
+            const subscription = sb
+                .channel('withdraw-updates')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'withdrawal_requests',
+                    filter: `user_id=eq.${currentUser.id}`
+                }, () => {
+                    loadWithdrawalRequests();
+                    loadUserData();
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${currentUser.id}`
+                }, () => {
+                    loadUserData();
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        async function init() {
+            await loadUserData();
+            subscription = subscribeToUpdates();
+            updateSummary();
+        }
+        
+        init();
+    </script>
+</body>
+</html>

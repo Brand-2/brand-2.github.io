@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>My Earnings | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .earnings-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .earning-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .earning-item:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .chart-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+        }
+        
+        .tab-btn {
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        
+        .tab-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        
+        .tab-btn:active {
+            transform: scale(0.97);
+        }
+        
+        @media (max-width: 640px) {
+            .earnings-card {
+                padding: 1.25rem;
+            }
+            .earnings-amount {
+                font-size: 2rem;
+            }
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .tab-btn {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.75rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .commission-badge {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Earnings</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto p-4 md:p-6">
+        <!-- Header -->
+        <div class="text-center mb-6 md:mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">My Influence Earnings</h1>
+            <p class="text-gray-400 text-sm">Track your earnings from sharing campaigns</p>
+        </div>
+
+        <!-- Total Earnings Card -->
+        <div class="earnings-card p-6 md:p-8 mb-6">
+            <div class="text-center">
+                <p class="text-gray-400 text-sm mb-2">Total Lifetime Earnings</p>
+                <div class="earnings-amount text-4xl md:text-5xl font-black text-emerald-500 mb-2" id="total-earnings">UGX 0</div>
+                <div class="flex items-center justify-center gap-2">
+                    <span class="text-xs text-gray-500">You've earned this from sharing campaigns</span>
+                    <span class="commission-badge">⚡ 10% fee applied</span>
+                </div>
+                <div class="mt-4">
+                    <button onclick="window.location.href='withdraw.html'" class="btn-primary px-6 py-2.5 rounded-lg text-white font-semibold text-sm">
+                        Withdraw Funds →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div class="stat-card p-4 text-center">
+                <div class="text-gray-400 text-xs">Available Balance</div>
+                <div class="text-lg md:text-xl font-bold text-emerald-500" id="available-balance">UGX 0</div>
+            </div>
+            <div class="stat-card p-4 text-center">
+                <div class="text-gray-400 text-xs">Total Shares</div>
+                <div class="text-lg md:text-xl font-bold text-white" id="total-shares">0</div>
+            </div>
+            <div class="stat-card p-4 text-center">
+                <div class="text-gray-400 text-xs">Total Clicks</div>
+                <div class="text-lg md:text-xl font-bold text-white" id="total-clicks">0</div>
+            </div>
+            <div class="stat-card p-4 text-center">
+                <div class="text-gray-400 text-xs">Total Views</div>
+                <div class="text-lg md:text-xl font-bold text-white" id="total-views">0</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-6 overflow-x-auto">
+            <div class="flex gap-2 border-b border-gray-800 pb-1 min-w-max">
+                <button onclick="showEarningsTab('overview')" id="tab-overview" class="tab-btn active">
+                    📊 Overview
+                </button>
+                <button onclick="showEarningsTab('by-campaign')" id="tab-by-campaign" class="tab-btn">
+                    🎯 By Campaign
+                </button>
+                <button onclick="showEarningsTab('daily')" id="tab-daily" class="tab-btn">
+                    📅 Daily
+                </button>
+                <button onclick="showEarningsTab('transactions')" id="tab-transactions" class="tab-btn">
+                    💰 History
+                </button>
+            </div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="earnings-tab">
+            <!-- Chart -->
+            <div class="stat-card p-4 md:p-6 mb-6">
+                <h3 class="text-sm font-bold text-white mb-4">Earnings Trend (Last 30 Days)</h3>
+                <div class="chart-container">
+                    <canvas id="earnings-chart" style="max-height: 250px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Performing Links -->
+            <div class="stat-card p-4 md:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-white">🏆 Top Performing Links</h3>
+                    <span class="text-xs text-gray-500">Highest earning first</span>
+                </div>
+                <div id="top-links" class="space-y-3 max-h-80 overflow-y-auto">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading top links...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- By Campaign Tab -->
+        <div id="by-campaign-tab" class="earnings-tab hidden">
+            <div class="stat-card p-4 md:p-6">
+                <h3 class="text-sm font-bold text-white mb-4">Earnings by Campaign</h3>
+                <div id="campaign-earnings" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading campaign earnings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Earnings Tab -->
+        <div id="daily-tab" class="earnings-tab hidden">
+            <div class="stat-card p-4 md:p-6">
+                <h3 class="text-sm font-bold text-white mb-4">Daily Earnings Breakdown</h3>
+                <div id="daily-earnings-list" class="space-y-2 max-h-80 overflow-y-auto">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading daily earnings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Tab -->
+        <div id="transactions-tab" class="earnings-tab hidden">
+            <div class="stat-card p-4 md:p-6">
+                <h3 class="text-sm font-bold text-white mb-4">Reward Transaction History</h3>
+                <div id="reward-transactions" class="space-y-3 max-h-80 overflow-y-auto">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading transactions...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let earningsChart = null;
+        let currentTab = 'overview';
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function showEarningsTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.earnings-tab').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${tab}-tab`).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            
+            document.getElementById('total-earnings').textContent = `UGX ${(profile.total_influence_earnings || 0).toLocaleString()}`;
+            document.getElementById('available-balance').textContent = `UGX ${(profile.wallet_balance || 0).toLocaleString()}`;
+        }
+        
+        async function loadEarningsStats() {
+            if (!currentUser) return;
+            
+            const { count: sharesCount } = await sb
+                .from('influence_links')
+                .select('*', { count: 'exact', head: true })
+                .eq('influencer_id', currentUser.id);
+            
+            document.getElementById('total-shares').textContent = sharesCount || 0;
+            
+            const { data: shares } = await sb
+                .from('influence_links')
+                .select('total_clicks, total_views')
+                .eq('influencer_id', currentUser.id);
+            
+            const totalClicks = shares?.reduce((sum, s) => sum + (s.total_clicks || 0), 0) || 0;
+            const totalViews = shares?.reduce((sum, s) => sum + (s.total_views || 0), 0) || 0;
+            
+            document.getElementById('total-clicks').textContent = totalClicks.toLocaleString();
+            document.getElementById('total-views').textContent = totalViews.toLocaleString();
+        }
+        
+        async function loadEarningsChart() {
+            if (!currentUser) return;
+            
+            const { data: transactions } = await sb
+                .from('transactions')
+                .select('amount, created_at')
+                .eq('user_id', currentUser.id)
+                .eq('transaction_type', 'reward')
+                .eq('status', 'completed')
+                .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+                .order('created_at', { ascending: true });
+            
+            const dailyEarnings = {};
+            transactions?.forEach(tx => {
+                const date = new Date(tx.created_at).toLocaleDateString();
+                dailyEarnings[date] = (dailyEarnings[date] || 0) + tx.amount;
+            });
+            
+            const dates = Object.keys(dailyEarnings);
+            const earnings = dates.map(d => dailyEarnings[d]);
+            
+            if (earningsChart) {
+                earningsChart.destroy();
+            }
+            
+            const ctx = document.getElementById('earnings-chart').getContext('2d');
+            earningsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates.length > 0 ? dates : ['No Data'],
+                    datasets: [{
+                        label: 'Daily Earnings (UGX)',
+                        data: earnings.length > 0 ? earnings : [0],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#9ca3af', font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `UGX ${context.parsed.y.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { 
+                                color: '#9ca3af', 
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return 'UGX ' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9ca3af', font: { size: 10 }, maxRotation: 45 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        async function loadTopLinks() {
+            if (!currentUser) return;
+            
+            const { data: shares } = await sb
+                .from('influence_links')
+                .select(`
+                    id,
+                    campaign_id,
+                    earnings,
+                    total_clicks,
+                    total_views,
+                    share_platform,
+                    campaigns!influence_links_campaign_id_fkey (
+                        campaign_name
+                    )
+                `)
+                .eq('influencer_id', currentUser.id)
+                .gt('earnings', 0)
+                .order('earnings', { ascending: false })
+                .limit(10);
+            
+            if (!shares || shares.length === 0) {
+                document.getElementById('top-links').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">🔗</div>
+                        <p class="text-sm">No links shared yet</p>
+                        <p class="text-xs mt-1">Start sharing campaigns to earn rewards</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = shares.map((share, index) => `
+                <div class="earning-item p-4">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-emerald-500 font-bold text-sm">#${index + 1}</span>
+                                <span class="font-bold text-white text-sm truncate">${share.campaigns?.campaign_name || 'Unknown Campaign'}</span>
+                                <span class="text-xs text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full">⚡ 10%</span>
+                            </div>
+                            <div class="flex flex-wrap gap-3 text-xs text-gray-500">
+                                <span>🖱️ ${share.total_clicks || 0} clicks</span>
+                                <span>👁️ ${share.total_views || 0} views</span>
+                                <span>📱 ${share.share_platform || 'Unknown'}</span>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0 ml-2">
+                            <div class="text-emerald-500 font-bold text-sm">UGX ${(share.earnings || 0).toLocaleString()}</div>
+                            <div class="text-xs text-gray-500">earned</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('top-links').innerHTML = html;
+        }
+        
+        async function loadCampaignEarnings() {
+            if (!currentUser) return;
+            
+            const { data: earnings } = await sb
+                .from('influence_links')
+                .select(`
+                    campaign_id,
+                    earnings,
+                    total_clicks,
+                    total_views,
+                    campaigns!influence_links_campaign_id_fkey (
+                        campaign_name
+                    )
+                `)
+                .eq('influencer_id', currentUser.id)
+                .gt('earnings', 0);
+            
+            const campaignMap = new Map();
+            earnings?.forEach(e => {
+                const campaignId = e.campaign_id;
+                if (!campaignMap.has(campaignId)) {
+                    campaignMap.set(campaignId, {
+                        name: e.campaigns?.campaign_name || 'Unknown',
+                        earnings: 0,
+                        clicks: 0,
+                        views: 0
+                    });
+                }
+                const campaign = campaignMap.get(campaignId);
+                campaign.earnings += e.earnings;
+                campaign.clicks += e.total_clicks || 0;
+                campaign.views += e.total_views || 0;
+            });
+            
+            const campaigns = Array.from(campaignMap.values()).sort((a, b) => b.earnings - a.earnings);
+            
+            if (campaigns.length === 0) {
+                document.getElementById('campaign-earnings').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">🎯</div>
+                        <p class="text-sm">No campaign earnings yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = campaigns.map(c => `
+                <div class="earning-item p-4">
+                    <div class="flex justify-between items-center">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <div class="font-bold text-white text-sm truncate">${c.name}</div>
+                                <span class="text-xs text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full">⚡ 10%</span>
+                            </div>
+                            <div class="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
+                                <span>🖱️ ${c.clicks.toLocaleString()} clicks</span>
+                                <span>👁️ ${c.views.toLocaleString()} views</span>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0 ml-2">
+                            <div class="text-emerald-500 font-bold text-sm">UGX ${c.earnings.toLocaleString()}</div>
+                            <div class="text-xs text-gray-500">total earned</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('campaign-earnings').innerHTML = html;
+        }
+        
+        async function loadDailyEarnings() {
+            if (!currentUser) return;
+            
+            const { data: transactions } = await sb
+                .from('transactions')
+                .select('amount, created_at')
+                .eq('user_id', currentUser.id)
+                .eq('transaction_type', 'reward')
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false });
+            
+            const dailyMap = new Map();
+            transactions?.forEach(tx => {
+                const date = new Date(tx.created_at).toLocaleDateString();
+                if (!dailyMap.has(date)) {
+                    dailyMap.set(date, 0);
+                }
+                dailyMap.set(date, dailyMap.get(date) + tx.amount);
+            });
+            
+            const dailyArray = Array.from(dailyMap.entries()).map(([date, amount]) => ({ date, amount }));
+            
+            if (dailyArray.length === 0) {
+                document.getElementById('daily-earnings-list').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">📅</div>
+                        <p class="text-sm">No daily earnings data yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = dailyArray.map(day => `
+                <div class="earning-item p-3 flex justify-between items-center">
+                    <div>
+                        <div class="font-medium text-white text-sm">${day.date}</div>
+                        <div class="text-xs text-gray-500">Daily total</div>
+                    </div>
+                    <div class="text-emerald-500 font-bold text-sm">UGX ${day.amount.toLocaleString()}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('daily-earnings-list').innerHTML = html;
+        }
+        
+        async function loadRewardTransactions() {
+            if (!currentUser) return;
+            
+            const { data: transactions } = await sb
+                .from('transactions')
+                .select(`
+                    *,
+                    campaigns!transactions_campaign_id_fkey (
+                        campaign_name
+                    )
+                `)
+                .eq('user_id', currentUser.id)
+                .eq('transaction_type', 'reward')
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            if (!transactions || transactions.length === 0) {
+                document.getElementById('reward-transactions').innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">💰</div>
+                        <p class="text-sm">No reward transactions yet</p>
+                        <p class="text-xs mt-1">Share campaigns to start earning rewards</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = transactions.map(tx => {
+                const commission = tx.commission_earned || (tx.amount * 0.10);
+                
+                return `
+                    <div class="earning-item p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <div class="font-bold text-white text-sm truncate">${tx.campaigns?.campaign_name || 'Reward Payment'}</div>
+                                    <span class="text-xs text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full">⚡ 10%</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">${new Date(tx.created_at).toLocaleString()}</div>
+                                <div class="text-xs text-gray-600 font-mono">Ref: ${tx.reference?.substring(0, 15) || 'N/A'}</div>
+                                <div class="text-xs text-yellow-500 mt-0.5">Fee deducted: UGX ${commission.toLocaleString()}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-2">
+                                <div class="text-emerald-500 font-bold text-sm">+ UGX ${tx.amount.toLocaleString()}</div>
+                                <div class="text-xs text-gray-500">reward payment</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('reward-transactions').innerHTML = html;
+        }
+        
+        // Real-time subscriptions
+        function subscribeToUpdates() {
+            if (!currentUser) return;
+            
+            const subscription = sb
+                .channel('earnings-updates')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'transactions',
+                    filter: `user_id=eq.${currentUser.id}`
+                }, () => {
+                    loadUserData();
+                    loadEarningsStats();
+                    loadEarningsChart();
+                    loadTopLinks();
+                    loadCampaignEarnings();
+                    loadDailyEarnings();
+                    loadRewardTransactions();
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'influence_links',
+                    filter: `influencer_id=eq.${currentUser.id}`
+                }, () => {
+                    loadEarningsStats();
+                    loadTopLinks();
+                    loadCampaignEarnings();
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${currentUser.id}`
+                }, () => {
+                    loadUserData();
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Initialize
+        async function init() {
+            await loadUserData();
+            await loadEarningsStats();
+            await loadEarningsChart();
+            await loadTopLinks();
+            await loadCampaignEarnings();
+            await loadDailyEarnings();
+            await loadRewardTransactions();
+            subscription = subscribeToUpdates();
+        }
+        
+        init();
+    </script>
+</body>
+</html>

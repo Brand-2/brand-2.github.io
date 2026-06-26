@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Influence | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .campaign-card {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        
+        .campaign-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .category-chip {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 10px;
+            color: #9ca3af;
+        }
+        
+        .category-chip.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .share-modal {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .copy-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .stat-badge {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+        }
+        
+        .earnings-preview {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 1rem;
+        }
+        
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .filter-btn {
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+        }
+        
+        .filter-btn.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .ad-thumb {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .rating-stars {
+            color: #f59e0b;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+        }
+        
+        .contact-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.6rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+        
+        @media (max-width: 640px) {
+            .campaign-card {
+                padding: 0 !important;
+            }
+            .ad-thumb {
+                height: 140px;
+            }
+            .category-chip {
+                font-size: 9px;
+                padding: 3px 8px;
+            }
+            .stat-badge {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+            .share-modal {
+                margin: 0.5rem;
+                padding: 1.25rem !important;
+            }
+            .card-content {
+                padding: 1rem;
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400" id="user-balance">Balance: UGX 0</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Dashboard
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
+        <!-- Header -->
+        <div class="text-center mb-6 md:mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Share Ads & Earn</h1>
+            <p class="text-gray-400 text-sm">Share these ad cards and earn money for every valid click and view</p>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-6">
+            <div class="stat-badge text-center p-2">
+                <div class="text-emerald-500 font-bold text-lg md:text-xl" id="total-campaigns">0</div>
+                <div class="text-gray-500 text-xs">Available Ads</div>
+            </div>
+            <div class="stat-badge text-center p-2">
+                <div class="text-emerald-500 font-bold text-lg md:text-xl" id="total-earning-potential">UGX 0</div>
+                <div class="text-gray-500 text-xs">Earning Potential</div>
+            </div>
+            <div class="stat-badge text-center p-2">
+                <div class="text-emerald-500 font-bold text-lg md:text-xl" id="my-shares-count">0</div>
+                <div class="text-gray-500 text-xs">My Shares</div>
+            </div>
+            <div class="stat-badge text-center p-2">
+                <div class="text-emerald-500 font-bold text-lg md:text-xl" id="my-earnings">UGX 0</div>
+                <div class="text-gray-500 text-xs">My Earnings</div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="flex flex-col md:flex-row gap-3 mb-6">
+            <div class="flex-1">
+                <input type="text" id="search-campaign" placeholder="🔍 Search ads by name, location or description..."
+                    class="search-input w-full px-4 py-2.5 text-white placeholder-gray-500 text-sm">
+            </div>
+            <div class="flex gap-1.5 overflow-x-auto pb-1 md:pb-0 flex-wrap">
+                <button onclick="filterCategory('all')" id="cat-all" class="category-chip active whitespace-nowrap">All</button>
+                <button onclick="filterCategory('Retail')" id="cat-retail" class="category-chip whitespace-nowrap">🛍️ Retail</button>
+                <button onclick="filterCategory('Technology')" id="cat-tech" class="category-chip whitespace-nowrap">💻 Tech</button>
+                <button onclick="filterCategory('Food & Beverage')" id="cat-food" class="category-chip whitespace-nowrap">🍔 Food</button>
+                <button onclick="filterCategory('Services')" id="cat-services" class="category-chip whitespace-nowrap">📞 Services</button>
+                <button onclick="filterCategory('Health & Beauty')" id="cat-health" class="category-chip whitespace-nowrap">💅 Beauty</button>
+                <button onclick="filterCategory('Education')" id="cat-education" class="category-chip whitespace-nowrap">📚 Education</button>
+            </div>
+        </div>
+
+        <!-- Campaigns Grid -->
+        <div id="campaigns-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="col-span-full text-center py-20">
+                <div class="loader mx-auto"></div>
+                <p class="text-gray-400 mt-4 text-sm">Loading ads...</p>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-20 hidden">
+            <div class="text-6xl mb-4">📭</div>
+            <h3 class="text-xl font-bold text-white mb-2">No Ads Available</h3>
+            <p class="text-gray-400 text-sm">Check back later for new ad cards to share</p>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-gray-900 rounded-2xl p-5 md:p-7 max-w-md w-full max-h-[90vh] overflow-y-auto share-modal">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Share Ad Card</h3>
+                <button onclick="closeShareModal()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+            </div>
+            
+            <div id="campaign-info" class="mb-4 p-3 bg-black/50 rounded-lg">
+                <div class="font-bold text-white text-lg" id="modal-campaign-name"></div>
+                <div class="text-sm text-gray-400 mt-1" id="modal-campaign-desc"></div>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <span class="text-xs text-emerald-500" id="modal-cpc">💰 UGX 0/click</span>
+                    <span class="text-xs text-blue-500" id="modal-cpv">👁️ UGX 0/view</span>
+                    <span class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">⚡ 10% fee</span>
+                </div>
+                <div class="flex flex-wrap gap-1 mt-2">
+                    <span class="contact-chip">📍 <span id="modal-location">-</span></span>
+                    <span class="contact-chip">📞 <span id="modal-phone">-</span></span>
+                </div>
+            </div>
+            
+            <!-- Earnings Preview -->
+            <div class="earnings-preview p-3 mb-4">
+                <div class="text-xs text-gray-400 mb-2">Potential Earnings (per 100 shares)</div>
+                <div class="flex justify-between text-sm">
+                    <span>From Clicks:</span>
+                    <span class="text-emerald-500 font-bold" id="preview-clicks">UGX 0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span>From Views:</span>
+                    <span class="text-emerald-500 font-bold" id="preview-views">UGX 0</span>
+                </div>
+                <div class="flex justify-between text-sm pt-2 border-t border-emerald-500/20">
+                    <span class="text-gray-400">Platform Fee:</span>
+                    <span class="text-yellow-500 font-bold">10%</span>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Your Unique Share Link</label>
+                <div class="flex gap-2">
+                    <input type="text" id="share-link" readonly
+                        class="flex-1 px-3 py-2 rounded-lg bg-black/50 border border-gray-700 text-white text-sm">
+                    <button onclick="copyShareLink()" class="copy-btn px-4 py-2 bg-emerald-500 rounded-lg text-white font-semibold text-sm">
+                        Copy
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-300 text-sm font-medium mb-2">Share on Social Media</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="shareOnWhatsApp()" class="py-2 bg-green-600 rounded-lg text-white text-sm font-medium">📱 WhatsApp</button>
+                    <button onclick="shareOnFacebook()" class="py-2 bg-blue-600 rounded-lg text-white text-sm font-medium">📘 Facebook</button>
+                    <button onclick="shareOnTwitter()" class="py-2 bg-black border border-gray-700 rounded-lg text-white text-sm font-medium">🐦 Twitter</button>
+                    <button onclick="shareOnTelegram()" class="py-2 bg-blue-500 rounded-lg text-white text-sm font-medium">📨 Telegram</button>
+                    <button onclick="shareOnTikTok()" class="py-2 bg-black border border-gray-700 rounded-lg text-white text-sm font-medium">🎵 TikTok</button>
+                    <button onclick="shareOnInstagram()" class="py-2 bg-pink-600 rounded-lg text-white text-sm font-medium">📷 Instagram</button>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-500/10 rounded-lg p-3 mb-4">
+                <p class="text-xs text-gray-300">
+                    💡 <span class="text-yellow-500">Pro Tip:</span> Share on multiple platforms to maximize your earnings! Each valid click earns you money.
+                </p>
+            </div>
+            
+            <button onclick="closeShareModal()" class="w-full py-2.5 rounded-lg bg-gray-800 text-white font-medium">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentProfile = null;
+        let allCampaigns = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let currentShareLink = null;
+        let currentCampaignId = null;
+        let currentCampaignData = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function generateStars(rating) {
+            const full = Math.round(rating || 0);
+            return '⭐'.repeat(full) + '☆'.repeat(5 - full);
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: profile } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            currentProfile = profile;
+            document.getElementById('user-balance').textContent = `Balance: UGX ${(profile.wallet_balance || 0).toLocaleString()}`;
+            document.getElementById('my-earnings').textContent = `UGX ${(profile.total_influence_earnings || 0).toLocaleString()}`;
+            
+            const { count: sharesCount } = await sb
+                .from('influence_links')
+                .select('*', { count: 'exact', head: true })
+                .eq('influencer_id', user.id);
+            
+            document.getElementById('my-shares-count').textContent = sharesCount || 0;
+        }
+        
+        async function loadCampaigns() {
+            const { data: campaigns } = await sb
+                .from('campaigns')
+                .select(`
+                    *,
+                    businesses (
+                        business_name,
+                        business_logo
+                    )
+                `)
+                .eq('status', 'active')
+                .eq('is_ad_card', true)
+                .gt('budget_remaining', 0)
+                .order('created_at', { ascending: false });
+            
+            allCampaigns = campaigns || [];
+            document.getElementById('total-campaigns').textContent = allCampaigns.length;
+            
+            const totalPotential = allCampaigns.reduce((sum, c) => sum + c.budget, 0);
+            document.getElementById('total-earning-potential').textContent = `UGX ${totalPotential.toLocaleString()}`;
+            
+            filterAndDisplayCampaigns();
+        }
+        
+        function filterAndDisplayCampaigns() {
+            let filtered = [...allCampaigns];
+            
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(c => {
+                    const category = c.target_audience?.category || 'Other';
+                    return category === currentFilter;
+                });
+            }
+            
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(c => 
+                    c.campaign_name.toLowerCase().includes(searchLower) ||
+                    (c.campaign_description && c.campaign_description.toLowerCase().includes(searchLower)) ||
+                    (c.businesses?.business_name && c.businesses.business_name.toLowerCase().includes(searchLower)) ||
+                    (c.location && c.location.toLowerCase().includes(searchLower))
+                );
+            }
+            
+            if (filtered.length === 0) {
+                document.getElementById('campaigns-grid').innerHTML = `
+                    <div class="col-span-full text-center py-20">
+                        <div class="text-6xl mb-4">🔍</div>
+                        <h3 class="text-xl font-bold text-white mb-2">No ads found</h3>
+                        <p class="text-gray-400 text-sm">Try adjusting your search or filter criteria</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = filtered.map(campaign => {
+                const category = campaign.target_audience?.category || 'Uncategorized';
+                const categoryIcon = {
+                    'Retail': '🛍️',
+                    'Technology': '💻',
+                    'Food & Beverage': '🍔',
+                    'Services': '📞',
+                    'Health & Beauty': '💅',
+                    'Education': '📚',
+                    'Real Estate': '🏠',
+                    'Entertainment': '🎬'
+                }[category] || '📌';
+                
+                const remainingBudget = campaign.budget_remaining;
+                const imageUrl = campaign.media_urls && campaign.media_urls.length > 0 ? campaign.media_urls[0] : null;
+                const rating = campaign.rating || 0;
+                const stars = generateStars(rating);
+                
+                return `
+                    <div class="campaign-card fade-in">
+                        ${imageUrl ? `
+                            <img src="${imageUrl}" alt="${campaign.campaign_name}" class="ad-thumb">
+                        ` : `
+                            <div class="ad-thumb flex items-center justify-center text-5xl bg-gray-800">
+                                🖼️
+                            </div>
+                        `}
+                        <div class="card-content p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">${categoryIcon}</span>
+                                    <span class="category-chip">${category}</span>
+                                </div>
+                                <span class="text-xs text-emerald-500">💰 UGX ${campaign.cost_per_click}/click</span>
+                            </div>
+                            
+                            <h3 class="font-bold text-white text-base mb-1">${campaign.campaign_name}</h3>
+                            <p class="text-gray-400 text-sm mb-2 line-clamp-2">${campaign.campaign_description || 'No description'}</p>
+                            
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">
+                                    ${campaign.businesses?.business_name?.charAt(0) || 'B'}
+                                </div>
+                                <span class="text-xs text-gray-500">${campaign.businesses?.business_name || 'Business'}</span>
+                            </div>
+                            
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                ${campaign.location ? `<span class="contact-chip">📍 ${campaign.location}</span>` : ''}
+                                ${campaign.phone_number ? `<span class="contact-chip">📞 ${campaign.phone_number}</span>` : ''}
+                                ${campaign.whatsapp_number ? `<span class="contact-chip">💬 WhatsApp</span>` : ''}
+                            </div>
+                            
+                            ${campaign.rating > 0 ? `
+                                <div class="flex items-center gap-1 mb-2">
+                                    <span class="rating-stars">${stars}</span>
+                                    <span class="text-xs text-gray-400">(${campaign.total_reviews || 0} reviews)</span>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="flex justify-between items-center pt-2 border-t border-gray-800">
+                                <div class="text-xs text-gray-500">
+                                    <div>👁️ ${(campaign.total_views || 0).toLocaleString()} views</div>
+                                    <div>🖱️ ${(campaign.total_clicks || 0).toLocaleString()} clicks</div>
+                                    <div>❤️ ${campaign.likes_count || 0} likes</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-gray-500">Budget Left</div>
+                                    <div class="text-sm font-bold text-emerald-500">UGX ${remainingBudget.toLocaleString()}</div>
+                                </div>
+                            </div>
+                            
+                            <button class="btn-primary w-full mt-4 py-2.5 rounded-lg text-white font-semibold text-sm" onclick="event.stopPropagation(); openShareModal('${campaign.id}', '${campaign.campaign_name.replace(/'/g, "\\'")}', '${(campaign.campaign_description || '').replace(/'/g, "\\'")}', ${campaign.cost_per_click}, ${campaign.cost_per_view}, '${campaign.location || ''}', '${campaign.phone_number || ''}')">
+                                📤 Share & Earn →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('campaigns-grid').innerHTML = html;
+        }
+        
+        function filterCategory(category) {
+            currentFilter = category;
+            
+            document.querySelectorAll('.category-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+            
+            const filterMap = {
+                'all': 'cat-all',
+                'Retail': 'cat-retail',
+                'Technology': 'cat-tech',
+                'Food & Beverage': 'cat-food',
+                'Services': 'cat-services',
+                'Health & Beauty': 'cat-health',
+                'Education': 'cat-education'
+            };
+            
+            const activeChip = document.getElementById(filterMap[category]);
+            if (activeChip) activeChip.classList.add('active');
+            
+            filterAndDisplayCampaigns();
+        }
+        
+        function openShareModal(campaignId, campaignName, campaignDesc, cpc, cpv, location, phone) {
+            currentCampaignId = campaignId;
+            currentCampaignData = { name: campaignName, desc: campaignDesc, cpc: cpc, cpv: cpv, location: location, phone: phone };
+            
+            document.getElementById('modal-campaign-name').textContent = campaignName;
+            document.getElementById('modal-campaign-desc').textContent = campaignDesc || 'No description';
+            document.getElementById('modal-cpc').textContent = `💰 UGX ${cpc}/click`;
+            document.getElementById('modal-cpv').textContent = `👁️ UGX ${cpv}/view`;
+            document.getElementById('modal-location').textContent = location || 'N/A';
+            document.getElementById('modal-phone').textContent = phone || 'N/A';
+            
+            // Update earnings preview (per 100 shares)
+            document.getElementById('preview-clicks').textContent = `UGX ${(cpc * 100).toLocaleString()}`;
+            document.getElementById('preview-views').textContent = `UGX ${(cpv * 100).toLocaleString()}`;
+            
+            // Generate unique share link - Direct to ad-card.html
+            const uniqueId = `${currentUser.id}_${campaignId}_${Date.now()}`;
+            currentShareLink = `${window.location.origin}/ad-card.html?ref=${btoa(uniqueId)}`;
+            document.getElementById('share-link').value = currentShareLink;
+            
+            document.getElementById('share-modal').classList.remove('hidden');
+        }
+        
+        function closeShareModal() {
+            document.getElementById('share-modal').classList.add('hidden');
+            currentShareLink = null;
+            currentCampaignId = null;
+        }
+        
+        async function copyShareLink() {
+            await navigator.clipboard.writeText(currentShareLink);
+            showToast('Link copied to clipboard!', 'success');
+        }
+        
+        async function trackAndShare(platform) {
+            if (!currentCampaignId || !currentUser) return;
+            
+            const { error } = await sb
+                .from('influence_links')
+                .insert({
+                    campaign_id: currentCampaignId,
+                    influencer_id: currentUser.id,
+                    unique_link: currentShareLink,
+                    share_platform: platform,
+                    is_active: true
+                });
+            
+            if (error) {
+                console.error('Error saving share:', error);
+                showToast('Error tracking share. Please try again.', 'error');
+            } else {
+                showToast(`Shared on ${platform}! You'll earn for every valid click.`, 'success');
+                
+                const { count } = await sb
+                    .from('influence_links')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('influencer_id', currentUser.id);
+                document.getElementById('my-shares-count').textContent = count || 0;
+                
+                closeShareModal();
+            }
+        }
+        
+        function shareOnWhatsApp() {
+            window.open(`https://wa.me/?text=${encodeURIComponent('Check out this ad! ' + currentShareLink)}`, '_blank');
+            trackAndShare('whatsapp');
+        }
+        
+        function shareOnFacebook() {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentShareLink)}`, '_blank');
+            trackAndShare('facebook');
+        }
+        
+        function shareOnTwitter() {
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out this ad on Brand 2!')}&url=${encodeURIComponent(currentShareLink)}`, '_blank');
+            trackAndShare('twitter');
+        }
+        
+        function shareOnTelegram() {
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(currentShareLink)}&text=${encodeURIComponent('Check out this ad!')}`, '_blank');
+            trackAndShare('telegram');
+        }
+        
+        function shareOnTikTok() {
+            navigator.clipboard.writeText(currentShareLink);
+            showToast('Link copied! Open TikTok and share it with your followers.', 'success');
+            trackAndShare('tiktok');
+        }
+        
+        function shareOnInstagram() {
+            navigator.clipboard.writeText(currentShareLink);
+            showToast('Link copied! Share it in your Instagram bio or stories.', 'success');
+            trackAndShare('instagram');
+        }
+        
+        // Search handler
+        document.getElementById('search-campaign').addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            filterAndDisplayCampaigns();
+        });
+        
+        // Real-time updates
+        function subscribeToUpdates() {
+            const subscription = sb
+                .channel('influence-campaigns')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'campaigns'
+                }, () => {
+                    loadCampaigns();
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${currentUser?.id}`
+                }, () => {
+                    loadUserData();
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Initialize
+        async function init() {
+            await loadUserData();
+            await loadCampaigns();
+            subscription = subscribeToUpdates();
+        }
+        
+        init();
+    </script>
+</body>
+</html>

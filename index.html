@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Brand 2 | Crowd-Powered Brand Awareness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0d0d0d 100%);
+        }
+        
+        .glow-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            border-radius: 1.5rem;
+        }
+        
+        .glow-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 40px rgba(16, 185, 129, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-outline {
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: #10b981;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stats-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+        }
+        
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(16, 185, 129, 0.15);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+        }
+        
+        .pricing-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 40px rgba(16, 185, 129, 0.05);
+        }
+        
+        .pricing-card.featured {
+            border-color: rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 80%;
+            max-width: 320px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            transition: right 0.3s ease;
+            z-index: 100;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .mobile-menu.open {
+            right: 0;
+        }
+        
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 99;
+            display: none;
+        }
+        
+        .menu-overlay.open {
+            display: block;
+        }
+        
+        @media (max-width: 640px) {
+            .hero-title {
+                font-size: 2.25rem;
+            }
+            .stats-card {
+                padding: 0.75rem;
+            }
+            .stats-number {
+                font-size: 1.5rem;
+            }
+            .pricing-card {
+                padding: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .hero-title {
+                font-size: 1.75rem;
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.8s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Overlay -->
+    <div id="menu-overlay" class="menu-overlay" onclick="closeMenu()"></div>
+    
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="mobile-menu">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-lg font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <button onclick="closeMenu()" class="text-gray-400 text-2xl hover:text-white transition">&times;</button>
+        </div>
+        
+        <nav class="space-y-4">
+            <a href="#features" onclick="closeMenu()" class="block text-gray-300 hover:text-emerald-400 transition text-lg">Features</a>
+            <a href="#how-it-works" onclick="closeMenu()" class="block text-gray-300 hover:text-emerald-400 transition text-lg">How It Works</a>
+            <a href="#pricing" onclick="closeMenu()" class="block text-gray-300 hover:text-emerald-400 transition text-lg">Pricing</a>
+            <div class="pt-4 border-t border-gray-800 space-y-3">
+                <button onclick="window.location.href='login.html'" class="w-full btn-outline py-2.5 rounded-lg text-emerald-500 font-medium">
+                    Sign In
+                </button>
+                <button onclick="window.location.href='register.html'" class="w-full btn-primary py-2.5 rounded-lg text-white font-medium">
+                    Get Started
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="window.location.href='index.html'">
+                <div class="w-8 h-8 md:w-10 md:h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl md:text-2xl font-black text-white">B</span>
+                </div>
+                <span class="text-xl md:text-2xl font-bold tracking-tight text-white">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            
+            <!-- Desktop Nav -->
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#features" class="text-gray-300 hover:text-emerald-400 transition text-sm">Features</a>
+                <a href="#how-it-works" class="text-gray-300 hover:text-emerald-400 transition text-sm">How It Works</a>
+                <a href="#pricing" class="text-gray-300 hover:text-emerald-400 transition text-sm">Pricing</a>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-3" id="nav-buttons">
+                <button onclick="window.location.href='login.html'" class="px-5 py-2 border border-emerald-500 text-emerald-500 rounded-lg hover:bg-emerald-500/10 transition text-sm font-medium">
+                    Sign In
+                </button>
+                <button onclick="window.location.href='register.html'" class="px-5 py-2 btn-primary text-white rounded-lg text-sm font-medium">
+                    Get Started
+                </button>
+            </div>
+            
+            <!-- Mobile Menu Toggle -->
+            <button onclick="toggleMenu()" class="md:hidden p-2 rounded-lg bg-gray-800">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 pt-12 md:pt-20 pb-16 md:pb-24">
+        <div class="text-center">
+            <div class="inline-block px-4 py-2 bg-emerald-500/10 rounded-full mb-4 md:mb-6 border border-emerald-500/20">
+                <span class="text-emerald-400 text-xs md:text-sm font-semibold">🚀 Launch Your Brand to Thousands</span>
+            </div>
+            <h1 class="hero-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 md:mb-6 leading-tight">
+                Advertise. Influence.<br>
+                <span class="gradient-text">Earn & Grow Together</span>
+            </h1>
+            <p class="text-base md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 md:mb-10 px-2">
+                The unified platform where you can post ads to reach thousands OR share links to earn money. One account, endless possibilities.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center px-2">
+                <button onclick="window.location.href='register.html'" class="px-6 md:px-8 py-3 md:py-4 btn-primary text-white rounded-xl font-semibold text-sm md:text-base">
+                    Create Free Account →
+                </button>
+                <button onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})" class="px-6 md:px-8 py-3 md:py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold text-sm md:text-base border border-gray-700 transition">
+                    Learn More
+                </button>
+            </div>
+            <div class="mt-6 md:mt-8 flex flex-wrap justify-center gap-4 md:gap-6 text-xs md:text-sm text-gray-500">
+                <span class="flex items-center gap-1">✅ Post Campaigns</span>
+                <span class="flex items-center gap-1">💰 Earn Per Click</span>
+                <span class="flex items-center gap-1">📱 Instant Withdrawals</span>
+                <span class="flex items-center gap-1">🔗 Share & Earn</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="max-w-7xl mx-auto px-4 pb-16 md:pb-20">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+            <div class="stats-card p-4 md:p-6 text-center">
+                <div class="stats-number text-2xl md:text-4xl font-black text-emerald-500 mb-1" id="active-campaigns">0</div>
+                <div class="text-gray-400 text-xs md:text-sm">Active Campaigns</div>
+            </div>
+            <div class="stats-card p-4 md:p-6 text-center">
+                <div class="stats-number text-2xl md:text-4xl font-black text-emerald-500 mb-1" id="total-users">0</div>
+                <div class="text-gray-400 text-xs md:text-sm">Active Users</div>
+            </div>
+            <div class="stats-card p-4 md:p-6 text-center">
+                <div class="stats-number text-2xl md:text-4xl font-black text-emerald-500 mb-1" id="total-earned">UGX 0</div>
+                <div class="text-gray-400 text-xs md:text-sm">Earned by Influencers</div>
+            </div>
+            <div class="stats-card p-4 md:p-6 text-center">
+                <div class="stats-number text-2xl md:text-4xl font-black text-emerald-500 mb-1" id="total-clicks">0</div>
+                <div class="text-gray-400 text-xs md:text-sm">Total Clicks</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="max-w-7xl mx-auto px-4 pb-16 md:pb-20">
+        <div class="text-center mb-10 md:mb-16">
+            <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">Why Choose <span class="gradient-text">Brand 2</span></h2>
+            <p class="text-gray-400 text-sm md:text-base">The most transparent and effective brand awareness platform</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div class="glow-card bg-black/40 p-6 md:p-8">
+                <div class="feature-icon mb-4">
+                    <span>🎯</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">Real Results Only</h3>
+                <p class="text-gray-400 text-sm">Businesses pay only for verified clicks and views. No bots, no fake engagement.</p>
+            </div>
+            <div class="glow-card bg-black/40 p-6 md:p-8">
+                <div class="feature-icon mb-4">
+                    <span>💰</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">Instant Earnings</h3>
+                <p class="text-gray-400 text-sm">Influencers get paid instantly for every valid click. Withdraw directly to mobile money from UGX 5,000.</p>
+            </div>
+            <div class="glow-card bg-black/40 p-6 md:p-8">
+                <div class="feature-icon mb-4">
+                    <span>📊</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">Advanced Analytics</h3>
+                <p class="text-gray-400 text-sm">Real-time dashboard showing clicks, views, conversion rates, and ROI for your campaigns.</p>
+            </div>
+            <div class="glow-card bg-black/40 p-6 md:p-8">
+                <div class="feature-icon mb-4">
+                    <span>🔒</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">Fraud Protection</h3>
+                <p class="text-gray-400 text-sm">Advanced algorithms detect and block fake clicks, ensuring genuine traffic for your campaigns.</p>
+            </div>
+            <div class="glow-card bg-black/40 p-6 md:p-8">
+                <div class="feature-icon mb-4">
+                    <span>🌍</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">Multi-Platform Sharing</h3>
+                <p class="text-gray-400 text-sm">Share campaigns on WhatsApp, Facebook, Twitter, Telegram, TikTok, Instagram and more.</p>
+            </div>
+            <div class="glow-card bg-black/40 p-6 md:p-8">
+                <div class="feature-icon mb-4">
+                    <span>⚡</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">Auto-Commission</h3>
+                <p class="text-gray-400 text-sm">10% platform fee automatically deducted on every transaction. Transparent and fair for everyone.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="bg-black/40 py-12 md:py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-10 md:mb-16">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">How <span class="gradient-text">It Works</span></h2>
+                <p class="text-gray-400 text-sm md:text-base">Simple, transparent, and effective for everyone</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                <div class="space-y-6 md:space-y-8">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-full flex items-center justify-center font-bold text-lg md:text-xl flex-shrink-0">1</div>
+                        <div>
+                            <h3 class="text-lg md:text-xl font-bold text-white mb-1">Advertise Your Brand</h3>
+                            <p class="text-gray-400 text-sm">Create a campaign, upload your content, set your budget, and start reaching thousands of potential customers.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-full flex items-center justify-center font-bold text-lg md:text-xl flex-shrink-0">2</div>
+                        <div>
+                            <h3 class="text-lg md:text-xl font-bold text-white mb-1">Share & Influence</h3>
+                            <p class="text-gray-400 text-sm">Browse available campaigns, share unique tracking links on your social media, and earn for every real click.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-500 rounded-full flex items-center justify-center font-bold text-lg md:text-xl flex-shrink-0">3</div>
+                        <div>
+                            <h3 class="text-lg md:text-xl font-bold text-white mb-1">Get Paid Instantly</h3>
+                            <p class="text-gray-400 text-sm">Withdraw your earnings directly to MTN or Airtel mobile money once you reach UGX 5,000 minimum threshold.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-emerald-500/10 to-transparent rounded-2xl p-6 md:p-8 border border-emerald-500/20">
+                    <div class="text-center mb-6">
+                        <div class="text-4xl md:text-5xl mb-4 floating">💰</div>
+                        <h3 class="text-xl md:text-2xl font-bold text-white mb-2">Earning Potential</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                            <span class="text-gray-400 text-sm">Per Valid Click</span>
+                            <span class="text-emerald-500 font-bold text-sm md:text-base">UGX 50 - 100</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                            <span class="text-gray-400 text-sm">Per Valid View</span>
+                            <span class="text-emerald-500 font-bold text-sm md:text-base">UGX 25 - 50</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                            <span class="text-gray-400 text-sm">Daily Average Earnings</span>
+                            <span class="text-emerald-500 font-bold text-sm md:text-base">UGX 10,000 - 50,000</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2">
+                            <span class="text-gray-400 text-sm">Minimum Withdrawal</span>
+                            <span class="text-emerald-500 font-bold text-sm md:text-base">UGX 5,000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="max-w-7xl mx-auto px-4 py-16 md:py-20">
+        <div class="text-center mb-10 md:mb-16">
+            <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">Simple <span class="gradient-text">Pricing</span></h2>
+            <p class="text-gray-400 text-sm md:text-base">No hidden fees. Pay only for what you use.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+            <div class="pricing-card p-6 md:p-8 text-center">
+                <div class="text-3xl md:text-4xl mb-4">📢</div>
+                <h3 class="text-xl md:text-2xl font-bold text-white mb-2">For Advertisers</h3>
+                <div class="text-3xl md:text-4xl font-black text-emerald-500 mb-4">10%</div>
+                <p class="text-gray-400 text-sm mb-6">Platform commission per campaign</p>
+                <div class="space-y-2 text-left text-gray-300 text-sm">
+                    <p>✓ Pay per click: UGX 50 - 100</p>
+                    <p>✓ Pay per view: UGX 25 - 50</p>
+                    <p>✓ Real-time analytics dashboard</p>
+                    <p>✓ Fraud protection included</p>
+                    <p>✓ Draft campaigns with balance check</p>
+                </div>
+                <button onclick="window.location.href='register.html'" class="w-full mt-6 md:mt-8 px-6 py-3 btn-primary text-white rounded-lg font-semibold text-sm">
+                    Start Advertising
+                </button>
+            </div>
+            <div class="pricing-card featured p-6 md:p-8 text-center">
+                <div class="text-3xl md:text-4xl mb-4">👥</div>
+                <h3 class="text-xl md:text-2xl font-bold text-white mb-2">For Influencers</h3>
+                <div class="text-3xl md:text-4xl font-black text-emerald-500 mb-4">100%</div>
+                <p class="text-gray-400 text-sm mb-6">You keep all your earnings</p>
+                <div class="space-y-2 text-left text-gray-300 text-sm">
+                    <p>✓ Earn per valid click & view</p>
+                    <p>✓ Minimum withdrawal: UGX 5,000</p>
+                    <p>✓ Instant mobile money payout</p>
+                    <p>✓ No fees on earnings</p>
+                    <p>✓ Multiple sharing platforms</p>
+                </div>
+                <button onclick="window.location.href='register.html'" class="w-full mt-6 md:mt-8 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-semibold text-sm border border-gray-700 transition">
+                    Start Earning
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="max-w-5xl mx-auto px-4 pb-16 md:pb-20">
+        <div class="bg-gradient-to-r from-emerald-900/30 to-emerald-800/30 rounded-3xl p-8 md:p-12 text-center border border-emerald-500/20">
+            <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-4">Ready to Get Started?</h2>
+            <p class="text-gray-400 text-sm md:text-base mb-6 md:mb-8">Join thousands already using Brand 2 to advertise and earn</p>
+            <button onclick="window.location.href='register.html'" class="px-8 py-4 btn-primary text-white rounded-xl font-semibold text-base md:text-lg">
+                Create Your Free Account →
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-8 md:py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <div class="flex items-center justify-center space-x-2 mb-4">
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-lg font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <p class="text-gray-500 text-sm">&copy; 2026 Brand 2. All rights reserved.</p>
+            <p class="text-xs text-gray-600 mt-1">Powered by EXIT</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        function toggleMenu() {
+            document.getElementById('mobile-menu').classList.toggle('open');
+            document.getElementById('menu-overlay').classList.toggle('open');
+        }
+        
+        function closeMenu() {
+            document.getElementById('mobile-menu').classList.remove('open');
+            document.getElementById('menu-overlay').classList.remove('open');
+        }
+        
+        // Check if user is logged in
+        async function checkUserSession() {
+            const { data: { user } } = await sb.auth.getUser();
+            const navButtons = document.getElementById('nav-buttons');
+            
+            if (user) {
+                // Check if profile exists
+                const { data: profile } = await sb
+                    .from('profiles')
+                    .select('id')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (profile) {
+                    navButtons.innerHTML = `
+                        <button onclick="window.location.href='dashboard.html'" class="px-5 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition text-sm font-medium">
+                            Dashboard
+                        </button>
+                        <button onclick="handleLogout()" class="px-5 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-500/10 transition text-sm font-medium">
+                            Logout
+                        </button>
+                    `;
+                }
+            }
+        }
+        
+        async function handleLogout() {
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
+        }
+        
+        // Load statistics for landing page
+        async function loadStats() {
+            try {
+                // Active campaigns count
+                const { count: campaignsCount } = await sb
+                    .from('campaigns')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'active');
+                
+                // Total users count
+                const { count: usersCount } = await sb
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('is_active', true);
+                
+                // Total earnings from completed rewards
+                const { data: earningsData } = await sb
+                    .from('transactions')
+                    .select('amount')
+                    .eq('transaction_type', 'reward')
+                    .eq('status', 'completed');
+                
+                const totalEarned = earningsData?.reduce((sum, tx) => sum + parseFloat(tx.amount), 0) || 0;
+                
+                // Total clicks from track_events
+                const { count: clicksCount } = await sb
+                    .from('track_events')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('event_type', 'click')
+                    .eq('is_valid', true);
+                
+                // Update DOM with animation
+                animateNumber('active-campaigns', campaignsCount || 0);
+                animateNumber('total-users', usersCount || 0);
+                animateNumber('total-earned', totalEarned, true);
+                animateNumber('total-clicks', clicksCount || 0);
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                // Set default values if error
+                document.getElementById('active-campaigns').textContent = '0';
+                document.getElementById('total-users').textContent = '0';
+                document.getElementById('total-earned').textContent = 'UGX 0';
+                document.getElementById('total-clicks').textContent = '0';
+            }
+        }
+        
+        function animateNumber(elementId, targetValue, isCurrency = false) {
+            const element = document.getElementById(elementId);
+            let current = 0;
+            const duration = 1500;
+            const steps = 60;
+            const increment = targetValue / steps;
+            let step = 0;
+            
+            const interval = setInterval(() => {
+                step++;
+                current += increment;
+                if (step >= steps) {
+                    current = targetValue;
+                    clearInterval(interval);
+                }
+                if (isCurrency) {
+                    element.textContent = `UGX ${Math.floor(current).toLocaleString()}`;
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, duration / steps);
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            checkUserSession();
+            loadStats();
+        });
+        
+        // Close mobile menu on resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                closeMenu();
+            }
+        });
+    </script>
+</body>
+</html>

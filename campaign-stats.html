@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Ad Card Stats | Brand 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .data-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+        }
+        
+        .data-card:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .status-badge {
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-draft { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        .status-completed { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 90%;
+            width: 100%;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .chart-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+            position: relative;
+        }
+        
+        .select-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            border-radius: 1rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+        }
+        
+        .select-input:focus {
+            outline: none;
+            border-color: #10b981;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .contact-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.6rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+        
+        .rating-stars {
+            color: #f59e0b;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+        
+        @media (max-width: 640px) {
+            .stat-card {
+                padding: 0.75rem;
+            }
+            .stat-value {
+                font-size: 1.25rem;
+            }
+            .data-card {
+                padding: 1rem;
+            }
+            .chart-container {
+                padding: 0.5rem;
+            }
+        }
+        
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goBack()">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <span class="text-xl font-black text-white">B</span>
+                </div>
+                <span class="text-lg font-bold text-white hidden sm:inline">Brand <span class="text-emerald-500">2</span></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-gray-400">Ad Stats</span>
+                <button onclick="goBack()" class="px-3 py-1.5 bg-gray-800 rounded-lg text-white text-sm">
+                    ← Back
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6">
+        <!-- Campaign Selector -->
+        <div class="mb-6">
+            <label class="block text-gray-300 text-sm font-medium mb-2">Select Ad Card</label>
+            <select id="campaign-selector" class="select-input w-full md:w-96 px-4 py-3 rounded-xl text-white text-base">
+                <option value="">Loading ad cards...</option>
+            </select>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="flex justify-center items-center py-20">
+            <div class="loader"></div>
+            <span class="text-gray-400 ml-3 text-sm">Loading ad data...</span>
+        </div>
+
+        <!-- Campaign Stats Content -->
+        <div id="stats-content" class="hidden">
+            <!-- Campaign Header -->
+            <div class="mb-6">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="text-2xl md:text-3xl font-bold text-white" id="campaign-title">Ad Title</h1>
+                    <span id="campaign-status" class="status-badge">Status</span>
+                    <span id="campaign-smart" class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">⚡ 10% Commission</span>
+                </div>
+                <p class="text-gray-400 text-sm mt-1" id="campaign-desc">Ad description</p>
+                <div class="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
+                    <span id="campaign-dates">Created: -</span>
+                    <span id="campaign-business">Business: -</span>
+                    <span id="campaign-location">📍 -</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 mt-2">
+                    <div id="rating-display" class="flex items-center gap-2">
+                        <span class="rating-stars" id="campaign-stars">☆☆☆☆☆</span>
+                        <span class="text-white font-bold text-sm" id="campaign-rating">0.0</span>
+                        <span class="text-gray-500 text-sm">(<span id="campaign-reviews">0</span> reviews)</span>
+                    </div>
+                    <span class="contact-chip">❤️ <span id="campaign-likes">0</span> likes</span>
+                    <span class="contact-chip">🔗 <span id="campaign-shares">0</span> shares</span>
+                </div>
+            </div>
+
+            <!-- Main Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+                <div class="stat-card p-4 text-center">
+                    <div class="text-gray-400 text-xs">Total Budget</div>
+                    <div class="text-lg md:text-xl font-bold text-white" id="total-budget">UGX 0</div>
+                    <div class="text-xs text-gray-500 mt-1" id="budget-remaining">Remaining: UGX 0</div>
+                </div>
+                <div class="stat-card p-4 text-center">
+                    <div class="text-gray-400 text-xs">Total Views</div>
+                    <div class="text-lg md:text-xl font-bold text-blue-500" id="total-views">0</div>
+                    <div class="text-xs text-gray-500 mt-1">Cost: UGX <span id="view-cost">0</span></div>
+                </div>
+                <div class="stat-card p-4 text-center">
+                    <div class="text-gray-400 text-xs">Total Clicks</div>
+                    <div class="text-lg md:text-xl font-bold text-emerald-500" id="total-clicks">0</div>
+                    <div class="text-xs text-gray-500 mt-1">Cost: UGX <span id="click-cost">0</span></div>
+                </div>
+                <div class="stat-card p-4 text-center">
+                    <div class="text-gray-400 text-xs">Engagement Rate</div>
+                    <div class="text-lg md:text-xl font-bold text-purple-500" id="engagement-rate">0%</div>
+                    <div class="text-xs text-gray-500 mt-1">Clicks / Views</div>
+                </div>
+            </div>
+
+            <!-- Contact Info Card -->
+            <div class="stat-card p-4 md:p-6 mb-6">
+                <h3 class="text-sm font-bold text-white mb-3">📞 Contact Information</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-black/30 rounded-xl p-3 text-center">
+                        <div class="text-gray-400 text-xs">Phone</div>
+                        <div class="text-white font-medium text-sm" id="stat-phone">-</div>
+                    </div>
+                    <div class="bg-black/30 rounded-xl p-3 text-center">
+                        <div class="text-gray-400 text-xs">WhatsApp</div>
+                        <div class="text-white font-medium text-sm" id="stat-whatsapp">-</div>
+                    </div>
+                    <div class="bg-black/30 rounded-xl p-3 text-center">
+                        <div class="text-gray-400 text-xs">Location</div>
+                        <div class="text-white font-medium text-sm" id="stat-location">-</div>
+                    </div>
+                    <div class="bg-black/30 rounded-xl p-3 text-center">
+                        <div class="text-gray-400 text-xs">Hours</div>
+                        <div class="text-white font-medium text-sm" id="stat-hours">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+                <div class="stat-card p-4 md:p-6">
+                    <h3 class="text-sm font-bold text-white mb-4">Daily Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="daily-chart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+                <div class="stat-card p-4 md:p-6">
+                    <h3 class="text-sm font-bold text-white mb-4">Click vs View Ratio</h3>
+                    <div class="chart-container">
+                        <canvas id="ratio-chart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commission Breakdown -->
+            <div class="stat-card p-4 md:p-6 mb-6">
+                <h3 class="text-sm font-bold text-white mb-4">💰 Commission Breakdown</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-yellow-500/10 rounded-xl p-4 text-center border border-yellow-500/20">
+                        <div class="text-gray-400 text-xs">Total Budget</div>
+                        <div class="text-lg font-bold text-white" id="commission-budget">UGX 0</div>
+                    </div>
+                    <div class="bg-yellow-500/10 rounded-xl p-4 text-center border border-yellow-500/20">
+                        <div class="text-gray-400 text-xs">Platform Fee (10%)</div>
+                        <div class="text-lg font-bold text-yellow-500" id="commission-fee">UGX 0</div>
+                    </div>
+                    <div class="bg-emerald-500/10 rounded-xl p-4 text-center border border-emerald-500/20">
+                        <div class="text-gray-400 text-xs">Influencers Earn</div>
+                        <div class="text-lg font-bold text-emerald-500" id="commission-marketer">UGX 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Performing Influencers -->
+            <div class="stat-card p-4 md:p-6 mb-6">
+                <h3 class="text-sm font-bold text-white mb-4">🏆 Top Performing Influencers</h3>
+                <div id="top-publishers" class="space-y-3">
+                    <div class="text-center text-gray-500 py-4">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading influencers...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Feed -->
+            <div class="stat-card p-4 md:p-6">
+                <h3 class="text-sm font-bold text-white mb-4">📊 Recent Activity</h3>
+                <div id="recent-activity" class="space-y-2 max-h-80 overflow-y-auto">
+                    <div class="text-center text-gray-500 py-4">
+                        <div class="loader"></div>
+                        <p class="mt-2">Loading activity...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-20 hidden">
+            <div class="text-6xl mb-4">📊</div>
+            <h3 class="text-xl font-bold text-white mb-2">No Ad Selected</h3>
+            <p class="text-gray-400 text-sm">Select an ad card from the dropdown above to view detailed statistics</p>
+            <button onclick="window.location.href='campaign-manage.html'" class="btn-primary px-6 py-2 rounded-lg text-white font-semibold mt-4">
+                View My Ads
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon"></span>
+        <span id="toast-message" class="text-sm"></span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kqyyhjudshjeztdlpmoa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXloanVkc2hqZXp0ZGxwbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjAzMzEsImV4cCI6MjA5NTkzNjMzMX0.w8uypyF_qEp5nesKGro8x8lET7lI8rzU5MxsIKf_jxQ';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let currentBusiness = null;
+        let currentCampaignId = null;
+        let dailyChart = null;
+        let ratioChart = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            document.getElementById('toast-icon').innerHTML = icons[type] || icons.info;
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+        
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        function generateStars(rating) {
+            const full = Math.round(rating);
+            return '⭐'.repeat(full) + '☆'.repeat(5 - full);
+        }
+        
+        async function loadUserData() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUser = user;
+            
+            const { data: business } = await sb
+                .from('businesses')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            
+            if (!business) {
+                showToast('Business profile not found', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            currentBusiness = business;
+            await loadCampaignsList();
+        }
+        
+        async function loadCampaignsList() {
+            const { data: campaigns } = await sb
+                .from('campaigns')
+                .select('id, campaign_name, status, location, rating, total_reviews')
+                .eq('business_id', currentBusiness.id)
+                .eq('is_ad_card', true)
+                .order('created_at', { ascending: false });
+            
+            const selector = document.getElementById('campaign-selector');
+            
+            if (!campaigns || campaigns.length === 0) {
+                selector.innerHTML = '<option value="">No ad cards found. Create one first.</option>';
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+            
+            selector.innerHTML = '<option value="">-- Select an ad card --</option>' + 
+                campaigns.map(c => {
+                    const rating = c.rating || 0;
+                    const stars = '⭐'.repeat(Math.round(rating));
+                    return `<option value="${c.id}">${c.campaign_name} (${c.status}) ${stars}</option>`;
+                }).join('');
+            
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('stats-content').classList.remove('hidden');
+            
+            // Check URL for campaign ID parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const campaignIdParam = urlParams.get('id');
+            
+            if (campaignIdParam && campaigns.some(c => c.id === campaignIdParam)) {
+                selector.value = campaignIdParam;
+                await loadCampaignStats(campaignIdParam);
+            } else if (campaigns.length > 0) {
+                selector.value = campaigns[0].id;
+                await loadCampaignStats(campaigns[0].id);
+            }
+        }
+        
+        async function loadCampaignStats(campaignId) {
+            if (!campaignId) {
+                document.getElementById('stats-content').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+            
+            currentCampaignId = campaignId;
+            document.getElementById('stats-content').classList.add('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('loading-state').classList.remove('hidden');
+            
+            try {
+                const { data: campaign, error: campaignError } = await sb
+                    .from('campaigns')
+                    .select('*, businesses!campaigns_business_id_fkey (business_name)')
+                    .eq('id', campaignId)
+                    .single();
+                
+                if (campaignError) throw campaignError;
+                
+                // Header
+                document.getElementById('campaign-title').textContent = campaign.campaign_name;
+                document.getElementById('campaign-desc').textContent = campaign.campaign_description || 'No description';
+                
+                const statusColors = {
+                    active: 'status-active',
+                    draft: 'status-draft',
+                    pending: 'status-pending',
+                    completed: 'status-completed',
+                    rejected: 'status-rejected'
+                };
+                const statusEl = document.getElementById('campaign-status');
+                statusEl.textContent = campaign.status;
+                statusEl.className = `status-badge ${statusColors[campaign.status] || 'status-pending'}`;
+                
+                document.getElementById('campaign-smart').textContent = '⚡ 10% Commission';
+                document.getElementById('campaign-dates').textContent = `Created: ${new Date(campaign.created_at).toLocaleDateString()}`;
+                document.getElementById('campaign-business').textContent = `Business: ${campaign.businesses?.business_name || 'N/A'}`;
+                document.getElementById('campaign-location').textContent = `📍 ${campaign.location || 'N/A'}`;
+                
+                // Rating
+                const rating = campaign.rating || 0;
+                document.getElementById('campaign-stars').textContent = generateStars(rating);
+                document.getElementById('campaign-rating').textContent = rating.toFixed(1);
+                document.getElementById('campaign-reviews').textContent = campaign.total_reviews || 0;
+                document.getElementById('campaign-likes').textContent = campaign.likes_count || 0;
+                document.getElementById('campaign-shares').textContent = campaign.shares_count || 0;
+                
+                // Contact Info
+                document.getElementById('stat-phone').textContent = campaign.phone_number || 'Not provided';
+                document.getElementById('stat-whatsapp').textContent = campaign.whatsapp_number || 'Not provided';
+                document.getElementById('stat-location').textContent = campaign.location || 'Not provided';
+                document.getElementById('stat-hours').textContent = campaign.business_hours || 'Not specified';
+                
+                // Stats
+                const totalBudget = campaign.budget;
+                const budgetRemaining = campaign.budget_remaining;
+                const spent = totalBudget - budgetRemaining;
+                const totalClicks = campaign.total_clicks || 0;
+                const totalViews = campaign.total_views || 0;
+                const clickCost = totalClicks * campaign.cost_per_click;
+                const viewCost = totalViews * campaign.cost_per_view;
+                const engagementRate = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(2) : 0;
+                const commission = totalBudget * 0.10;
+                const marketerEarnings = totalBudget - commission;
+                
+                document.getElementById('total-budget').textContent = `UGX ${totalBudget.toLocaleString()}`;
+                document.getElementById('budget-remaining').textContent = `Remaining: UGX ${budgetRemaining.toLocaleString()}`;
+                document.getElementById('total-views').textContent = totalViews.toLocaleString();
+                document.getElementById('total-clicks').textContent = totalClicks.toLocaleString();
+                document.getElementById('view-cost').textContent = viewCost.toLocaleString();
+                document.getElementById('click-cost').textContent = clickCost.toLocaleString();
+                document.getElementById('engagement-rate').textContent = `${engagementRate}%`;
+                
+                // Commission
+                document.getElementById('commission-budget').textContent = `UGX ${totalBudget.toLocaleString()}`;
+                document.getElementById('commission-fee').textContent = `UGX ${commission.toLocaleString()}`;
+                document.getElementById('commission-marketer').textContent = `UGX ${marketerEarnings.toLocaleString()}`;
+                
+                // Load charts and data
+                await loadDailyStats(campaignId);
+                await loadTopPublishers(campaignId);
+                await loadRecentActivity(campaignId);
+                
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('stats-content').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error loading campaign stats:', error);
+                showToast('Failed to load ad statistics', 'error');
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        }
+        
+        async function loadDailyStats(campaignId) {
+            const { data: events } = await sb
+                .from('track_events')
+                .select('event_type, created_at')
+                .eq('campaign_id', campaignId)
+                .eq('is_valid', true)
+                .order('created_at', { ascending: true });
+            
+            const dailyData = {};
+            events?.forEach(event => {
+                const date = new Date(event.created_at).toLocaleDateString();
+                if (!dailyData[date]) {
+                    dailyData[date] = { clicks: 0, views: 0 };
+                }
+                if (event.event_type === 'click') {
+                    dailyData[date].clicks++;
+                } else if (event.event_type === 'view') {
+                    dailyData[date].views++;
+                }
+            });
+            
+            const dates = Object.keys(dailyData).slice(-14);
+            const clicks = dates.map(d => dailyData[d].clicks);
+            const views = dates.map(d => dailyData[d].views);
+            
+            if (dailyChart) {
+                dailyChart.destroy();
+            }
+            
+            const ctx = document.getElementById('daily-chart').getContext('2d');
+            dailyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Views',
+                            data: views,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'Clicks',
+                            data: clicks,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#9ca3af', font: { size: 11 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9ca3af', font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9ca3af', font: { size: 10 }, maxRotation: 45 }
+                        }
+                    }
+                }
+            });
+            
+            // Ratio pie chart
+            if (ratioChart) {
+                ratioChart.destroy();
+            }
+            
+            const totalClicks = clicks.reduce((a, b) => a + b, 0);
+            const totalViews = views.reduce((a, b) => a + b, 0);
+            
+            const ratioCtx = document.getElementById('ratio-chart').getContext('2d');
+            ratioChart = new Chart(ratioCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Clicks', 'Views'],
+                    datasets: [{
+                        data: [totalClicks || 1, totalViews || 1],
+                        backgroundColor: ['#10b981', '#3b82f6'],
+                        borderColor: 'transparent'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#9ca3af', font: { size: 11 } }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+        
+        async function loadTopPublishers(campaignId) {
+            const { data: shares } = await sb
+                .from('influence_links')
+                .select(`
+                    id,
+                    earnings,
+                    total_clicks,
+                    total_views,
+                    influencer_id,
+                    profiles!influence_links_influencer_id_fkey (
+                        full_name,
+                        email
+                    )
+                `)
+                .eq('campaign_id', campaignId)
+                .order('earnings', { ascending: false })
+                .limit(10);
+            
+            if (!shares || shares.length === 0) {
+                document.getElementById('top-publishers').innerHTML = `
+                    <div class="text-center text-gray-500 py-4">No shares yet for this ad</div>
+                `;
+                return;
+            }
+            
+            const html = shares.map((share, index) => `
+                <div class="data-card p-3 flex justify-between items-center">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-500 text-xs flex-shrink-0">
+                            ${index + 1}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-bold text-white text-sm truncate">${share.profiles?.full_name || 'Anonymous Influencer'}</div>
+                            <div class="text-xs text-gray-500">${share.total_clicks || 0} clicks | ${share.total_views || 0} views</div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-2">
+                        <div class="text-emerald-500 font-bold text-sm">UGX ${(share.earnings || 0).toLocaleString()}</div>
+                        <div class="text-xs text-gray-500">earned</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('top-publishers').innerHTML = html;
+        }
+        
+        async function loadRecentActivity(campaignId) {
+            const { data: events } = await sb
+                .from('track_events')
+                .select(`
+                    *,
+                    influence_links!track_events_share_id_fkey (
+                        influencer_id,
+                        profiles!influence_links_influencer_id_fkey (
+                            full_name
+                        )
+                    )
+                `)
+                .eq('campaign_id', campaignId)
+                .eq('is_valid', true)
+                .order('created_at', { ascending: false })
+                .limit(20);
+            
+            if (!events || events.length === 0) {
+                document.getElementById('recent-activity').innerHTML = `
+                    <div class="text-center text-gray-500 py-4">No activity recorded yet</div>
+                `;
+                return;
+            }
+            
+            const html = events.map(event => {
+                const eventIcon = event.event_type === 'click' ? '🖱️' : '👁️';
+                const eventColor = event.event_type === 'click' ? 'text-emerald-500' : 'text-blue-500';
+                const publisherName = event.influence_links?.profiles?.full_name || 'Anonymous';
+                
+                return `
+                    <div class="data-card p-2 flex justify-between items-center">
+                        <div class="flex items-center space-x-2 min-w-0">
+                            <span class="${eventColor} text-sm">${eventIcon}</span>
+                            <div class="min-w-0">
+                                <div class="text-xs text-white truncate">${event.event_type.toUpperCase()} from ${publisherName}</div>
+                                <div class="text-xs text-gray-500">${new Date(event.created_at).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 flex-shrink-0 ml-2">
+                            ${event.ip_address || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('recent-activity').innerHTML = html;
+        }
+        
+        // Campaign selector change handler
+        document.getElementById('campaign-selector').addEventListener('change', (e) => {
+            const campaignId = e.target.value;
+            if (campaignId) {
+                loadCampaignStats(campaignId);
+            } else {
+                document.getElementById('stats-content').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        });
+        
+        // Real-time subscription for campaign updates
+        function subscribeToCampaignUpdates() {
+            const subscription = sb
+                .channel('campaign-stats')
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'campaigns',
+                    filter: `id=eq.${currentCampaignId}`
+                }, () => {
+                    if (currentCampaignId) {
+                        loadCampaignStats(currentCampaignId);
+                    }
+                })
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'track_events',
+                    filter: `campaign_id=eq.${currentCampaignId}`
+                }, () => {
+                    if (currentCampaignId) {
+                        loadDailyStats(currentCampaignId);
+                        loadRecentActivity(currentCampaignId);
+                    }
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'ad_reviews',
+                    filter: `campaign_id=eq.${currentCampaignId}`
+                }, () => {
+                    if (currentCampaignId) {
+                        loadCampaignStats(currentCampaignId);
+                    }
+                })
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        let subscription = null;
+        
+        // Initialize
+        async function init() {
+            await loadUserData();
+            subscription = subscribeToCampaignUpdates();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
