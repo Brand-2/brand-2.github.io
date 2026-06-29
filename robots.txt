@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /track.html
+
+# Hide private onboarding loops
+Disallow: /profile.html
+Disallow: /profile-complete.html
+
+# Hide secure administration screens
+Disallow: /admin-dashboard-admin.html
+Disallow: /admin-withdraws.html
+Disallow: /admin-campaigns.html
+
+# Hide advertiser campaign management
+Disallow: /campaign-create.html
+Disallow: /campaign-stats.html
+
+# Link to your sitemap
+Sitemap: https://brand-2.github.io/sitemap.xml
